@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  # Core Python version
+  # this file is not finished
   - python=3.10
   - numpy
   - pandas
