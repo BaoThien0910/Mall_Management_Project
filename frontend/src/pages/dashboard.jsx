@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Layout, Menu, Card, Table, Typography, Row, Col, 
@@ -16,7 +16,7 @@ const { Title, Text } = Typography;
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
+  const [isMobile, setIsMobile] = useState(false);
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
@@ -77,7 +77,20 @@ export default function Dashboard() {
     <Layout style={{ minHeight: '100vh' }}>
       
       {/* ─── SIDEBAR ─── */}
-      <Sider width={250} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
+      <Sider 
+        width={250} 
+        theme="light" 
+        breakpoint="lg" 
+        collapsedWidth="0"
+        onBreakpoint={(broken) => setIsMobile(broken)} // Tracks if screen is mobile size
+        style={{ 
+            borderRight: '1px solid #f0f0f0',
+            /* The Magic Fix: */
+            position: isMobile ? 'absolute' : 'relative',
+            height: '100vh',
+            zIndex: 999, // Ensures it floats ON TOP of your charts
+        }}
+      >
         <div style={{ padding: '24px 20px', borderBottom: '1px solid #f0f0f0' }}>
           <Title level={4} style={{ margin: 0, color: '#1890ff' }}>MallAdmin Pro</Title>
           <Text type="secondary" style={{ fontSize: '12px' }}>Management Suite</Text>
@@ -129,35 +142,42 @@ export default function Dashboard() {
           </div>
 
           {/* KPI Cards */}
-          <Row gutter={24} style={{ marginBottom: '24px' }}>
-            <Col span={6}>
-              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          {/* Replace your current KPI Row with this */}
+          <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
+        
+        {/* Notice the responsive props: xs={24} (mobile), sm={12} (tablet), lg={6} (desktop) */}
+            <Col xs={24} sm={12} lg={6}>
+                <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                 <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>TỔNG DOANH THU</Text>
                 <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>đ 12.4B</Title>
                 <Text type="success" style={{ fontSize: '12px' }}><ArrowUpOutlined /> 8.2% vs last period</Text>
-              </Card>
+                </Card>
             </Col>
-            <Col span={6}>
-              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+
+            <Col xs={24} sm={12} lg={6}>
+                <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                 <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>TỶ LỆ LẤP ĐẦY</Text>
                 <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>94%</Title>
                 <Text type="secondary" style={{ fontSize: '12px' }}>Stable</Text>
-              </Card>
+                </Card>
             </Col>
-            <Col span={6}>
-              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+
+            <Col xs={24} sm={12} lg={6}>
+                <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                 <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>LƯỢT KHÁCH</Text>
                 <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>45,210</Title>
                 <Text type="success" style={{ fontSize: '12px' }}><ArrowUpOutlined /> 2.4% vs last period</Text>
-              </Card>
+                </Card>
             </Col>
-            <Col span={6}>
-              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+
+            <Col xs={24} sm={12} lg={6}>
+                <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                 <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>YÊU CẦU BẢO TRÌ</Text>
                 <Title level={3} style={{ margin: '8px 0', color: '#cf1322' }}>12</Title>
                 <Text type="danger" style={{ fontSize: '12px' }}>Pending action</Text>
-              </Card>
+                </Card>
             </Col>
+
           </Row>
 
           {/* Table Section */}
@@ -171,7 +191,8 @@ export default function Dashboard() {
             <Table 
               columns={tableColumns} 
               dataSource={tableData} 
-              pagination={false} 
+              pagination={false}
+              scroll={{ x: 600 }}
             />
           </Card>
 

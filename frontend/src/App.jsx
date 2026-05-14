@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import LoginPage from './pages/login'; 
 import Dashboard from './pages/dashboard';
 
@@ -6,27 +7,25 @@ import Dashboard from './pages/dashboard';
 function LoginWrapper() {
   const navigate = useNavigate();
 
-  const handleLoginSubmit = async ({ email, password, remember }) => {
+  const handleLoginSubmit = async (values) => {
     try {
-      const response = await fetch("http://localhost:8000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, remember }),
-      });
+      // 1. Send the data (Axios automatically handles the JSON conversion)
+      const response = await axios.post("http://localhost:8000/api/login", values);
 
-      const data = await response.json();
+      // 2. If the code reaches this line, it means Python sent a 200 OK success!
+      localStorage.setItem("token", response.data.token);
+      navigate("/");
 
-      if (response.ok) {
-        // 1. Save the token to the browser's memory
-        localStorage.setItem("token", data.token);
-        
-        // 2. Send the user to the dashboard
-        navigate("/");
-      } else {
-        alert("Error: " + data.detail);
-      }
     } catch (error) {
-      console.error("Failed to connect to the backend", error);
+      // 3. If Python sends an error (like 401 Wrong Password), Axios instantly jumps here
+      if (error.response) {
+        // The server replied, but said the password was wrong
+        alert("Error: " + error.response.data.detail);
+      } else {
+        // The server is completely turned off or unreachable
+        console.error("Failed to connect to the backend", error);
+        alert("Cannot connect to the server. Is Python running?");
+      }
     }
   };
 
