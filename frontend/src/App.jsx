@@ -1,46 +1,53 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import LoginPage from './pages/login'; 
-import Dashboard from './pages/dashboard';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// We create a wrapper component for the Login page so we can use the 'useNavigate' hook
-function LoginWrapper() {
-  const navigate = useNavigate();
+import LoginPage from './pages/auth/LoginPage';
+import UnauthorizedPage from './pages/system/UnauthorizedPage';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
-  const handleLoginSubmit = async (values) => {
-    try {
-      // 1. Send the data (Axios automatically handles the JSON conversion)
-      const response = await axios.post("http://localhost:8000/api/login", values);
-
-      // 2. If the code reaches this line, it means Python sent a 200 OK success!
-      localStorage.setItem("token", response.data.token);
-      navigate("/");
-
-    } catch (error) {
-      // 3. If Python sends an error (like 401 Wrong Password), Axios instantly jumps here
-      if (error.response) {
-        // The server replied, but said the password was wrong
-        alert("Error: " + error.response.data.detail);
-      } else {
-        // The server is completely turned off or unreachable
-        console.error("Failed to connect to the backend", error);
-        alert("Cannot connect to the server. Is Python running?");
-      }
-    }
-  };
-
-  return <LoginPage onLogin={handleLoginSubmit} />;
-}
+import AdminLayout from './layouts/AdminLayout';
+import TenantLayout from './layouts/TenantLayout';
+import StaffLayout from './layouts/StaffLayout';
+import ManagementLayout from './layouts/ManagementLayout';
+import DashboardPage from './pages/DashboardPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* The root path shows the Dashboard */}
-        <Route path="/" element={<Dashboard />} />
-        
-        {/* The /login path shows the Login Page */}
-        <Route path="/login" element={<LoginWrapper />} />
+        {/* PUBLIC ROUTES */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+        {/* ─── PROTECTED ADMIN ROUTES ─── */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<DashboardPage />} />
+          </Route>
+        </Route>
+
+        {/* ─── PROTECTED TENANT ROUTES ─── */}
+        <Route element={<ProtectedRoute allowedRoles={['tenant']} />}>
+          <Route path="/tenant" element={<TenantLayout />}>
+            <Route index element={<h2>Tenant Dashboard</h2>} />
+          </Route>
+        </Route>
+
+        {/* ─── PROTECTED STAFF ROUTES ─── */}
+        <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route index element={<h2>Staff Dashboard</h2>} />
+          </Route>
+        </Route>
+
+        {/* ─── PROTECTED MANAGEMENT ROUTES ─── */}
+        <Route element={<ProtectedRoute allowedRoles={['management']} />}>
+          <Route path="/management" element={<ManagementLayout />}>
+            <Route index element={<h2>Management Dashboard</h2>} />
+          </Route>
+        </Route>
+
+        {/* DEFAULT REDIRECT */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

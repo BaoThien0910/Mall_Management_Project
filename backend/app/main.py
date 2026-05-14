@@ -1,34 +1,53 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
-# 1. Allow React to talk to this API
+# --- CORS Configuration ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # Your Vite React URL
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 2. Define what the incoming data looks like
+# --- Pydantic Models ---
 class LoginRequest(BaseModel):
     email: str
     password: str
-    remember: bool
+    remember: Optional[bool] = False
 
-# 3. Create the Login Route
+# --- API Endpoints ---
 @app.post("/api/login")
-async def login_user(request: LoginRequest):
-    # This is a mock database check. We will add a real database later!
-    if request.email == "admin@gmail.com" and request.password == "admin123":
+async def login(request: LoginRequest):
+    # Our mock database with CHEAT CODES for ultra-fast testing!
+    mock_users = {
+        # Standard Accounts
+        "admin@mainplaza.com": {"password": "admin123", "role": "admin"},
+        "tenant@mainplaza.com": {"password": "tenant123", "role": "tenant"},
+        "staff@mainplaza.com": {"password": "staff123", "role": "staff"},
+        "board@mainplaza.com": {"password": "board123", "role": "management"},
+        
+        # 🌟 Cheat Code Accounts (Password is just "1") DELETE WHEN DONE
+        "a": {"password": "1", "role": "admin"},
+        "t": {"password": "1", "role": "tenant"},
+        "s": {"password": "1", "role": "staff"},
+        "b": {"password": "1", "role": "management"}
+    }
+
+    user = mock_users.get(request.email)
+
+    if user and user["password"] == request.password:
         return {
-            "status": "success",
-            "message": "Login successful!",
-            "token": "fake-jwt-token-12345"
+            "token": f"super_secret_token_for_{user['role']}",
+            "role": user["role"],
+            "message": "Login successful"
         }
     else:
-        # If the password is wrong, send back a 401 Unauthorized error
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=401, 
+            detail="Sai email hoặc mật khẩu!" 
+        )
