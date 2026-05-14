@@ -1,13 +1,3 @@
-/**
- * LoginPage.jsx — MallAdmin Pro
- * Self-contained: no Tailwind config required, no external icon font.
- * Only dependency: React (with useState hook).
- *
- * Usage:
- *   import LoginPage from './LoginPage';
- *   <LoginPage onLogin={({ email, password, remember }) => { ... }} />
- */
-
 import { useState } from "react";
 
 /* ─── Inline SVG icons ─────────────────────────────────────────── */
