@@ -1,0 +1,12 @@
+name: tttm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Core Python version
+  - python=3.10
+  - numpy
+  - pandas
+  - matplotlib
+  - pip
+  
