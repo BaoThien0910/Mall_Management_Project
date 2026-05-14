@@ -1,316 +1,182 @@
-/**
- * Dashboard.jsx — MallAdmin Pro
- * Only dependency: React & react-router-dom.
- */
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Layout, Menu, Card, Table, Typography, Row, Col, 
+  Input, Avatar, Badge, Button, Tag 
+} from 'antd';
+import { 
+  DashboardOutlined, ShopOutlined, FileTextOutlined, 
+  ToolOutlined, DollarOutlined, LogoutOutlined, 
+  QuestionCircleOutlined, BellOutlined, SettingOutlined, 
+  SearchOutlined, ArrowUpOutlined 
+} from '@ant-design/icons';
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+const { Header, Sider, Content } = Layout;
+const { Title, Text } = Typography;
 
-/* ─── Inline SVG icons ─────────────────────────────────────────── */
-const IconDomain = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-  </svg>
-);
-
-const IconDashboard = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-  </svg>
-);
-
-const IconLogout = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-  </svg>
-);
-
-/* ─── Styles (Matching Login Palette) ──────────────────────────── */
-const theme = {
-  bg: "#f9f9f9",
-  surface: "#ffffff",
-  primary: "#000666",
-  primaryDark: "#1a237e",
-  textMain: "#1a1c1c",
-  textMuted: "#454652",
-  textLight: "#767683",
-  border: "#c6c5d4",
-  borderLight: "rgba(198,197,212,0.3)",
-};
-
-const s = {
-  layout: {
-    display: "flex",
-    height: "100vh",
-    width: "100%",
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    backgroundColor: theme.bg,
-    color: theme.textMain,
-    overflow: "hidden",
-  },
-  sidebar: {
-    width: "260px",
-    backgroundColor: theme.surface,
-    borderRight: `1px solid ${theme.borderLight}`,
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
-  },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "24px",
-    borderBottom: `1px solid ${theme.borderLight}`,
-    color: theme.primary,
-  },
-  brandText: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  brandTitle: {
-    fontSize: "18px",
-    fontWeight: 700,
-    letterSpacing: "-0.01em",
-    margin: 0,
-  },
-  brandSub: {
-    fontSize: "11px",
-    color: theme.textMuted,
-    margin: 0,
-  },
-  nav: {
-    padding: "16px",
-    flex: 1,
-  },
-  navItemActive: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    backgroundColor: theme.primaryDark,
-    color: theme.surface,
-    borderRadius: "6px",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: 600,
-    marginBottom: "8px",
-  },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    color: theme.textMuted,
-    borderRadius: "6px",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: 500,
-    marginBottom: "8px",
-    cursor: "pointer",
-  },
-  sidebarBottom: {
-    padding: "16px",
-    borderTop: `1px solid ${theme.borderLight}`,
-  },
-  logoutBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    width: "100%",
-    backgroundColor: "transparent",
-    border: "none",
-    color: theme.textMuted,
-    fontSize: "14px",
-    fontWeight: 500,
-    cursor: "pointer",
-    textAlign: "left",
-    borderRadius: "6px",
-  },
-  main: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  },
-  header: {
-    height: "72px",
-    backgroundColor: theme.surface,
-    borderBottom: `1px solid ${theme.borderLight}`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 32px",
-  },
-  searchInput: {
-    width: "300px",
-    padding: "10px 16px",
-    backgroundColor: theme.bg,
-    border: `1px solid ${theme.borderLight}`,
-    borderRadius: "20px",
-    fontSize: "13px",
-    outline: "none",
-    color: theme.textMain,
-  },
-  content: {
-    flex: 1,
-    padding: "32px",
-    overflowY: "auto",
-  },
-  pageTitle: {
-    fontSize: "28px",
-    fontWeight: 700,
-    margin: "0 0 4px 0",
-    color: theme.textMain,
-  },
-  pageSub: {
-    fontSize: "14px",
-    color: theme.textMuted,
-    margin: "0 0 32px 0",
-  },
-  grid4: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "24px",
-    marginBottom: "24px",
-  },
-  card: {
-    backgroundColor: theme.surface,
-    padding: "20px",
-    borderRadius: "8px",
-    border: `1px solid ${theme.borderLight}`,
-    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-  },
-  cardTitle: {
-    fontSize: "12px",
-    fontWeight: 600,
-    color: theme.textLight,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    marginBottom: "12px",
-    display: "block",
-  },
-  cardValue: {
-    fontSize: "24px",
-    fontWeight: 700,
-    color: theme.primary,
-    margin: 0,
-  },
-};
-
-/* ─── Component ────────────────────────────────────────────────── */
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [hoverLogout, setHoverLogout] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
   };
 
+  // --- Sidebar Menu Configuration ---
+  const menuItems = [
+    { key: '1', icon: <DashboardOutlined />, label: 'Dashboard' },
+    { key: '2', icon: <ShopOutlined />, label: 'Tenants' },
+    { key: '3', icon: <FileTextOutlined />, label: 'Leases' },
+    { key: '4', icon: <ToolOutlined />, label: 'Maintenance' },
+    { key: '5', icon: <DollarOutlined />, label: 'Financials' },
+  ];
+
+  const bottomMenuItems = [
+    { key: 'help', icon: <QuestionCircleOutlined />, label: 'Help Center' },
+    { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout },
+  ];
+
+  // --- Table Data Configuration ---
+  const tableColumns = [
+    {
+      title: 'Tenant',
+      dataIndex: 'tenant',
+      key: 'tenant',
+      render: (text, record) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Text strong>{text}</Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>{record.category}</Text>
+        </div>
+      )
+    },
+    { title: 'Unit', dataIndex: 'unit', key: 'unit' },
+    { title: 'Expiry Date', dataIndex: 'date', key: 'date' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        let color = status === 'URGENT' ? 'red' : 'volcano';
+        return <Tag color={color}>{status}</Tag>;
+      }
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: () => <Button size="small">Renew</Button>,
+      align: 'right'
+    },
+  ];
+
+  const tableData = [
+    { key: '1', tenant: 'Starbucks', category: 'F&B', unit: 'GF-01', date: 'Oct 15, 2023', status: 'URGENT' },
+    { key: '2', tenant: 'H&M', category: 'Fashion', unit: 'L1-12', date: 'Nov 02, 2023', status: 'WARNING' },
+  ];
+
   return (
-    <div style={s.layout}>
+    <Layout style={{ minHeight: '100vh' }}>
       
-      {/* ── Sidebar ── */}
-      <div style={s.sidebar}>
-        <div style={s.brand}>
-          <IconDomain />
-          <div style={s.brandText}>
-            <h1 style={s.brandTitle}>Mall Management</h1>
-            <p style={s.brandSub}>Management Suite</p>
-          </div>
+      {/* ─── SIDEBAR ─── */}
+      <Sider width={250} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
+        <div style={{ padding: '24px 20px', borderBottom: '1px solid #f0f0f0' }}>
+          <Title level={4} style={{ margin: 0, color: '#1890ff' }}>MallAdmin Pro</Title>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Management Suite</Text>
         </div>
-
-        <div style={s.nav}>
-          <div style={s.navItemActive}>
-            <IconDashboard />
-            Dashboard
-          </div>
-          <div style={s.navItem}>
-            <span style={{width: 20, height: 20, backgroundColor: theme.borderLight, borderRadius: 4}}></span>
-            Tenants
-          </div>
-          <div style={s.navItem}>
-            <span style={{width: 20, height: 20, backgroundColor: theme.borderLight, borderRadius: 4}}></span>
-            Leases
-          </div>
-        </div>
-
-        <div style={s.sidebarBottom}>
-          <button 
-            onClick={handleLogout}
-            onMouseEnter={() => setHoverLogout(true)}
-            onMouseLeave={() => setHoverLogout(false)}
-            style={{
-              ...s.logoutBtn,
-              backgroundColor: hoverLogout ? theme.bg : "transparent",
-              color: hoverLogout ? theme.primary : theme.textMuted
-            }}
-          >
-            <IconLogout />
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* ── Main Content ── */}
-      <div style={s.main}>
         
-        {/* Header */}
-        <div style={s.header}>
-          <input 
-            type="text" 
-            placeholder="Search tenants, leases, or tickets..." 
-            style={s.searchInput}
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100% - 76px)' }}>
+          <Menu 
+            mode="inline" 
+            defaultSelectedKeys={['1']} 
+            items={menuItems} 
+            style={{ borderRight: 0, flex: 1, padding: '16px 0' }}
           />
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <span style={{ color: theme.textMuted }}>🔔</span>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: theme.primary, color: theme.surface, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: "bold" }}>
-              A
-            </div>
-          </div>
+          <Menu 
+            mode="inline" 
+            selectable={false} 
+            items={bottomMenuItems} 
+            style={{ borderRight: 0, borderTop: '1px solid #f0f0f0', padding: '16px 0' }}
+          />
         </div>
+      </Sider>
 
-        {/* Scrollable Body */}
-        <div style={s.content}>
-          <h2 style={s.pageTitle}>Chào buổi sáng, Admin</h2>
-          <p style={s.pageSub}>Here is what's happening at your property today.</p>
+      {/* ─── MAIN LAYOUT ─── */}
+      <Layout>
+        
+        {/* HEADER */}
+        <Header style={{ background: '#fff', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+          <Input 
+            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} 
+            placeholder="Search tenants, leases, or tickets..." 
+            style={{ width: 300, borderRadius: '20px' }} 
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <Badge dot><BellOutlined style={{ fontSize: '18px', cursor: 'pointer' }} /></Badge>
+            <SettingOutlined style={{ fontSize: '18px', cursor: 'pointer' }} />
+            <Avatar style={{ backgroundColor: '#1890ff' }}>A</Avatar>
+          </div>
+        </Header>
 
-          {/* KPI Grid */}
-          <div style={s.grid4}>
-            <div style={s.card}>
-              <span style={s.cardTitle}>Tổng Doanh Thu</span>
-              <p style={s.cardValue}>đ 12.4B</p>
+        {/* CONTENT */}
+        <Content style={{ margin: '24px 32px', overflow: 'initial' }}>
+          
+          {/* Greeting */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
+            <div>
+              <Title level={2} style={{ margin: 0 }}>Chào buổi sáng, Admin</Title>
+              <Text type="secondary">Here is what's happening at your property today.</Text>
             </div>
-            <div style={s.card}>
-              <span style={s.cardTitle}>Tỷ Lệ Lấp Đầy</span>
-              <p style={s.cardValue}>94%</p>
-            </div>
-            <div style={s.card}>
-              <span style={s.cardTitle}>Lượt Khách</span>
-              <p style={s.cardValue}>45,210</p>
-            </div>
-            <div style={s.card}>
-              <span style={s.cardTitle}>Yêu Cầu Bảo Trì</span>
-              <p style={{...s.cardValue, color: "#ba1a1a"}}>12</p>
-            </div>
+            <Button>📅 7 ngày qua</Button>
           </div>
 
-          {/* Charts Placeholder Area */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
-            <div style={{...s.card, height: "300px", display: "flex", flexDirection: "column"}}>
-               <span style={{...s.cardTitle, color: theme.textMain}}>Xu hướng doanh thu & Lượt khách</span>
-               <div style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 4, border: `1px dashed ${theme.border}` }}></div>
-            </div>
-            <div style={{...s.card, height: "300px", display: "flex", flexDirection: "column"}}>
-               <span style={{...s.cardTitle, color: theme.textMain}}>Cơ cấu ngành hàng</span>
-               <div style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 4, border: `1px dashed ${theme.border}`, borderRadius: "50%", margin: "20px auto", width: "260px" }}></div>
-            </div>
-          </div>
+          {/* KPI Cards */}
+          <Row gutter={24} style={{ marginBottom: '24px' }}>
+            <Col span={6}>
+              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>TỔNG DOANH THU</Text>
+                <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>đ 12.4B</Title>
+                <Text type="success" style={{ fontSize: '12px' }}><ArrowUpOutlined /> 8.2% vs last period</Text>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>TỶ LỆ LẤP ĐẦY</Text>
+                <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>94%</Title>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Stable</Text>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>LƯỢT KHÁCH</Text>
+                <Title level={3} style={{ margin: '8px 0', color: '#1890ff' }}>45,210</Title>
+                <Text type="success" style={{ fontSize: '12px' }}><ArrowUpOutlined /> 2.4% vs last period</Text>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'bold' }}>YÊU CẦU BẢO TRÌ</Text>
+                <Title level={3} style={{ margin: '8px 0', color: '#cf1322' }}>12</Title>
+                <Text type="danger" style={{ fontSize: '12px' }}>Pending action</Text>
+              </Card>
+            </Col>
+          </Row>
 
-        </div>
-      </div>
+          {/* Table Section */}
+          <Card 
+            title="Hợp đồng sắp hết hạn" 
+            extra={<Button type="link">VIEW ALL</Button>}
+            bordered={false} 
+            style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+            bodyStyle={{ padding: 0 }}
+          >
+            <Table 
+              columns={tableColumns} 
+              dataSource={tableData} 
+              pagination={false} 
+            />
+          </Card>
 
-    </div>
+        </Content>
+      </Layout>
+    </Layout>
   );
 }

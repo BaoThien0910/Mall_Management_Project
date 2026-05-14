@@ -23,7 +23,7 @@ class LoginRequest(BaseModel):
 @app.post("/api/login")
 async def login_user(request: LoginRequest):
     # This is a mock database check. We will add a real database later!
-    if request.email == "admin@mainplaza.com" and request.password == "admin123":
+    if request.email == "admin@gmail.com" and request.password == "admin123":
         return {
             "status": "success",
             "message": "Login successful!",
