@@ -115,10 +115,10 @@ export default function AccountManagementPage() {
 
           <Form.Item name="role" label="Vai trò" rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}>
             <Select placeholder="Chọn vai trò">
-              <Option value="admin">Quản trị viên (Admin)</Option>
-              <Option value="management">Ban Quản Lý (Board)</Option>
-              <Option value="staff">Nhân viên (Staff)</Option>
-              <Option value="tenant">Khách thuê (Tenant)</Option>
+              <Option value="admin">Quản trị viên</Option>
+              <Option value="management">Ban quản lý</Option>
+              <Option value="staff">Nhân viên</Option>
+              <Option value="tenant">Khách thuê</Option>
             </Select>
           </Form.Item>
 

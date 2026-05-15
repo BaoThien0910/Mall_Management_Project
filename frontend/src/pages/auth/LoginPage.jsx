@@ -63,7 +63,7 @@ export default function LoginPage() {
       <Col xs={24} lg={12} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff', padding: '48px', zIndex: 1, boxShadow: '2px 0 8px rgba(0,0,0,0.05)' }}>
         <div style={{ width: '100%', maxWidth: '400px' }}>
           <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-            <Title level={2} style={{ color: '#1890ff', marginBottom: '8px' }}>MallAdmin Pro</Title>
+            <Title level={2} style={{ color: '#1890ff', marginBottom: '8px' }}>Quản lý TTTM</Title>
             <Text type="secondary" style={{ fontSize: '16px' }}>Hệ thống quản lý trung tâm thương mại</Text>
           </div>
 
@@ -100,10 +100,10 @@ export default function LoginPage() {
 
       {/* ─── RIGHT SIDE: IMAGE ─── */}
       <Col xs={0} lg={12} style={{ position: 'relative', overflow: 'hidden', backgroundColor: '#e6f7ff' }}>
-        <img src={mallBg} alt="Mall" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+        <img src={mallBg} alt="Trung tâm thương mại" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
         <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(24, 144, 255, 0.1)', mixBlendMode: 'multiply' }}></div>
         <div style={{ position: 'absolute', bottom: '40px', right: '40px', backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', padding: '16px 24px', borderRadius: '8px' }}>
-          <Text strong><CheckCircleFilled style={{ color: '#52c41a' }} /> System Status: Optimal</Text>
+          <Text strong><CheckCircleFilled style={{ color: '#52c41a' }} /> Trạng thái hệ thống: Ổn định</Text>
         </div>
       </Col>
 

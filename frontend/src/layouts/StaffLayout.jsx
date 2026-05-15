@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { Layout, Menu, Avatar, Badge, Typography, Button, Drawer, Grid } from 'antd';
 import { 
   DashboardOutlined, 
@@ -19,6 +19,7 @@ const { useBreakpoint } = Grid;
 
 export default function StaffLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const screens = useBreakpoint();
   const isMobile = screens.lg === false; 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -47,11 +48,16 @@ export default function StaffLayout() {
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #f0f0f0' }}>
-        <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Mall Operations</Title>
-        <Text type="secondary" style={{ fontSize: '12px' }}>Staff Workspace</Text>
+        <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Vận hành trung tâm</Title>
+        <Text type="secondary" style={{ fontSize: '12px' }}>Không gian nhân viên</Text>
       </div>
       
-      <Menu mode="inline" defaultSelectedKeys={['/staff']} items={menuItems} style={{ borderRight: 0, flex: 1, padding: '16px 0' }} />
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname.startsWith('/staff/finance') ? '/staff/finance' : location.pathname]}
+        items={menuItems}
+        style={{ borderRight: 0, flex: 1, padding: '16px 0' }}
+      />
       <Menu mode="inline" selectable={false} items={[{ key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', onClick: handleLogout }]} style={{ borderTop: '1px solid #f0f0f0', padding: '16px 0' }} />
     </div>
   );
@@ -76,7 +82,7 @@ export default function StaffLayout() {
               <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ fontSize: '18px', width: 48, height: 48, marginLeft: -16 }} />
             )}
             {/* Contextual Greeting */}
-            <Title level={5} style={{ margin: 0 }}>Workspace: Nguyễn Văn A (Nhân viên KD-TC)</Title>
+            <Title level={5} style={{ margin: 0 }}>Nguyễn Văn A — Nhân viên KD-TC</Title>
           </div>
 
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

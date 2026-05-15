@@ -40,7 +40,7 @@ export default function AdminLayout() {
   };
 
   const menuItems = [
-    { key: '/admin', icon: <DashboardOutlined />, label: 'Dashboard', onClick: () => handleMenuClick("/admin") },
+    { key: '/admin', icon: <DashboardOutlined />, label: 'Bảng điều khiển', onClick: () => handleMenuClick("/admin") },
     
     { key: '/admin/accounts', icon: <TeamOutlined />, label: 'Quản lý Tài khoản', onClick: () => handleMenuClick("/admin/accounts") },
     { key: '/admin/logs', icon: <HistoryOutlined />, label: 'Nhật ký thao tác', onClick: () => handleMenuClick("/admin/logs") },
@@ -51,11 +51,11 @@ export default function AdminLayout() {
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #f0f0f0' }}>
-        <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Mall Admin</Title>
+        <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Quản trị hệ thống</Title>
       </div>
       
       <Menu mode="inline" defaultSelectedKeys={['/']} items={menuItems} style={{ borderRight: 0, flex: 1, padding: '16px 0' }} />
-      <Menu mode="inline" selectable={false} items={[{ key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout }]} style={{ borderTop: '1px solid #f0f0f0', padding: '16px 0' }} />
+      <Menu mode="inline" selectable={false} items={[{ key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', onClick: handleLogout }]} style={{ borderTop: '1px solid #f0f0f0', padding: '16px 0' }} />
     </div>
   );
 
@@ -96,7 +96,7 @@ export default function AdminLayout() {
                 style={{ fontSize: '18px', width: 48, height: 48, marginLeft: -16 }} 
               />
             )}
-            <Input prefix={<SearchOutlined style={{color: '#bfbfbf'}}/>} placeholder="Search..." style={{ width: isMobile ? 150 : 300, borderRadius: '20px' }} />
+            <Input prefix={<SearchOutlined style={{color: '#bfbfbf'}}/>} placeholder="Tìm kiếm..." style={{ width: isMobile ? 150 : 300, borderRadius: '20px' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

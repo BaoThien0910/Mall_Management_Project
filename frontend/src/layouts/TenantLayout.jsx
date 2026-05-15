@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { Layout, Menu, Avatar, Badge, Typography, Button, Drawer, Grid } from 'antd';
 import { 
   HomeOutlined, 
@@ -17,6 +17,7 @@ const { useBreakpoint } = Grid;
 
 export default function TenantLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const screens = useBreakpoint();
   const isMobile = screens.lg === false; 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -34,21 +35,26 @@ export default function TenantLayout() {
 
   // 🌟 Tenant-Specific Menu Items
   const menuItems = [
-    { key: '/tenant', icon: <HomeOutlined />, label: 'My Space', onClick: () => handleMenuClick("/tenant") },
-    { key: '/tenant/contract', icon: <FileTextOutlined />, label: 'My Lease', onClick: () => handleMenuClick("/tenant/contract") },
-    { key: '/tenant/billing', icon: <CreditCardOutlined />, label: 'Billing & Payments', onClick: () => handleMenuClick("/tenant/billing") },
-    { key: '/tenant/maintenance', icon: <ToolOutlined />, label: 'Request Repair', onClick: () => handleMenuClick("/tenant/maintenance") },
+    { key: '/tenant', icon: <HomeOutlined />, label: 'Trang chủ', onClick: () => handleMenuClick("/tenant") },
+    { key: '/tenant/contract', icon: <FileTextOutlined />, label: 'Hợp đồng của tôi', onClick: () => handleMenuClick("/tenant/contract") },
+    { key: '/tenant/billing', icon: <CreditCardOutlined />, label: 'Công nợ & Thanh toán', onClick: () => handleMenuClick("/tenant/billing") },
+    { key: '/tenant/maintenance', icon: <ToolOutlined />, label: 'Yêu cầu sửa chữa', onClick: () => handleMenuClick("/tenant/maintenance") },
   ];
 
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #f0f0f0' }}>
-        <Title level={4} style={{ margin: 0, color: '#af6715' }}>Tenant Portal</Title>
-        <Text type="secondary" style={{ fontSize: '12px' }}>Main Plaza Mall</Text>
+        <Title level={4} style={{ margin: 0, color: '#af6715' }}>Cổng khách thuê</Title>
+        <Text type="secondary" style={{ fontSize: '12px' }}>Trung tâm Main Plaza</Text>
       </div>
       
-      <Menu mode="inline" defaultSelectedKeys={['/tenant']} items={menuItems} style={{ borderRight: 0, flex: 1, padding: '16px 0' }} />
-      <Menu mode="inline" selectable={false} items={[{ key: 'logout', icon: <LogoutOutlined />, label: 'Logout', onClick: handleLogout }]} style={{ borderTop: '1px solid #f0f0f0', padding: '16px 0' }} />
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname.startsWith('/tenant/billing') ? '/tenant/billing' : location.pathname]}
+        items={menuItems}
+        style={{ borderRight: 0, flex: 1, padding: '16px 0' }}
+      />
+      <Menu mode="inline" selectable={false} items={[{ key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', onClick: handleLogout }]} style={{ borderTop: '1px solid #f0f0f0', padding: '16px 0' }} />
     </div>
   );
 
@@ -72,7 +78,7 @@ export default function TenantLayout() {
               <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} style={{ fontSize: '18px', width: 48, height: 48, marginLeft: -16 }} />
             )}
             {/* Removed the search bar for tenants to keep it simple! */}
-            <Title level={5} style={{ margin: 0 }}>Welcome, Starbucks GF-01</Title>
+            <Title level={5} style={{ margin: 0 }}>Xin chào, Starbucks — GF-01</Title>
           </div>
 
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

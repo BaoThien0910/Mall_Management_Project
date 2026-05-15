@@ -35,7 +35,7 @@ export default function ManagementLayout() {
 
   // 🌟 Management-Specific Menu Items 
   const menuItems = [
-    { key: '/management', icon: <BarChartOutlined />, label: 'Tổng quan (Dashboard)', onClick: () => handleMenuClick("/management") },
+    { key: '/management', icon: <BarChartOutlined />, label: 'Tổng quan', onClick: () => handleMenuClick("/management") },
     { key: '/management/approvals', icon: <CheckCircleOutlined />, label: 'Duyệt yêu cầu', onClick: () => handleMenuClick("/management/approvals") },
     { key: '/management/reports', icon: <FileDoneOutlined />, label: 'Báo cáo tổng hợp', onClick: () => handleMenuClick("/management/reports") },
     { key: '/management/announcements', icon: <NotificationOutlined />, label: 'Ban hành Thông báo', onClick: () => handleMenuClick("/management/announcements") },
@@ -44,8 +44,8 @@ export default function ManagementLayout() {
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #f0f0f0' }}>
-        <Title level={4} style={{ margin: 0, color: '#722ed1' }}>Mall Management</Title>
-        <Text type="secondary" style={{ fontSize: '12px' }}>Board of Directors</Text>
+        <Title level={4} style={{ margin: 0, color: '#722ed1' }}>Ban quản lý</Title>
+        <Text type="secondary" style={{ fontSize: '12px' }}>Hội đồng quản trị</Text>
       </div>
       
       <Menu mode="inline" defaultSelectedKeys={['/management']} items={menuItems} style={{ borderRight: 0, flex: 1, padding: '16px 0' }} />
