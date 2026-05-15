@@ -11,3 +11,4 @@ dependencies:
   - pip
   - fastapi 
   - pydantic
+  - "uvicorn[standard]"
