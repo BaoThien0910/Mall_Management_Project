@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import LoginPage from './pages/login'; 
 import Dashboard from './pages/dashboard';
+import TenantsPage from './pages/tenants';
 
 // We create a wrapper component for the Login page so we can use the 'useNavigate' hook
 function LoginWrapper() {
@@ -41,6 +42,9 @@ export default function App() {
         
         {/* The /login path shows the Login Page */}
         <Route path="/login" element={<LoginWrapper />} />
+
+        {/* The /tenants path shows the Tenants Management Page */}
+        <Route path="/tenants" element={<TenantsPage />} />
       </Routes>
     </BrowserRouter>
   );

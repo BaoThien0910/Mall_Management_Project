@@ -24,8 +24,8 @@ export default function Dashboard() {
 
   // --- Sidebar Menu Configuration ---
   const menuItems = [
-    { key: '1', icon: <DashboardOutlined />, label: 'Dashboard' },
-    { key: '2', icon: <ShopOutlined />, label: 'Tenants' },
+    { key: '1', icon: <DashboardOutlined />, label: 'Dashboard', onClick: () => navigate('/') },
+    { key: '2', icon: <ShopOutlined />, label: 'Tenants', onClick: () => navigate('/tenants') },
     { key: '3', icon: <FileTextOutlined />, label: 'Leases' },
     { key: '4', icon: <ToolOutlined />, label: 'Maintenance' },
     { key: '5', icon: <DollarOutlined />, label: 'Financials' },

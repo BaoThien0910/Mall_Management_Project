@@ -3,10 +3,21 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  # this file is not finished
   - python=3.10
+  - pip
   - numpy
   - pandas
   - matplotlib
-  - pip
+  - pip:
+    - fastapi
+    - uvicorn[standard]
+    - sqlalchemy>=2.0
+    - aioodbc
+    - pyodbc
+    - passlib[bcrypt]
+    - alembic
+    - python-dotenv
+    - pydantic-settings
+    - pydantic[email]
+
   
