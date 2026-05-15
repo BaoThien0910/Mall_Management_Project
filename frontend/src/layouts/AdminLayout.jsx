@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { Layout, Menu, Input, Avatar, Badge, Typography, Button, Drawer, Grid } from 'antd';
 import { 
-  DashboardOutlined, 
-  DollarOutlined, 
+  DashboardOutlined,  
   LogoutOutlined, 
   BellOutlined, 
   SearchOutlined, 
-  MenuOutlined 
+  MenuOutlined, 
+  TeamOutlined, 
+  HistoryOutlined
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -39,8 +40,10 @@ export default function AdminLayout() {
   };
 
   const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: 'Dashboard', onClick: () => handleMenuClick("/") },
-    { key: '/finance', icon: <DollarOutlined />, label: 'Finance', onClick: () => handleMenuClick("/finance") },
+    { key: '/admin', icon: <DashboardOutlined />, label: 'Dashboard', onClick: () => handleMenuClick("/admin") },
+    
+    { key: '/admin/accounts', icon: <TeamOutlined />, label: 'Quản lý Tài khoản', onClick: () => handleMenuClick("/admin/accounts") },
+    { key: '/admin/logs', icon: <HistoryOutlined />, label: 'Nhật ký thao tác', onClick: () => handleMenuClick("/admin/logs") },
   ];
 
   // 🌟 We extract the menu content into a variable so we can reuse it 

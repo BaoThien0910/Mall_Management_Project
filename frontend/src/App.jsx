@@ -1,9 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+// pages/auth
 import LoginPage from './pages/auth/LoginPage';
-import UnauthorizedPage from './pages/system/UnauthorizedPage';
+// pages/sys
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import AccountManagementPage from './pages/system/AccountManagementPage';
+import AuditLogPage from './pages/system/AuditLogPage';
+// components
 import ProtectedRoute from './components/common/ProtectedRoute';
-
+// 
 import AdminLayout from './layouts/AdminLayout';
 import TenantLayout from './layouts/TenantLayout';
 import StaffLayout from './layouts/StaffLayout';
@@ -22,6 +27,8 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="accounts" element={<AccountManagementPage />} />
+            <Route path="logs" element={<AuditLogPage />} />
           </Route>
         </Route>
 
