@@ -76,6 +76,7 @@ export default function AuditLogPage() {
         dataSource={logs} 
         style={{ backgroundColor: '#fff', borderRadius: '8px' }}
         pagination={{ pageSize: 10 }}
+        scroll={{ x: 1000 }}
       />
     </>
   );

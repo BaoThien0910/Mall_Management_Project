@@ -87,6 +87,7 @@ export default function AccountManagementPage() {
         columns={columns} 
         dataSource={users} 
         style={{ backgroundColor: '#fff', borderRadius: '8px' }}
+        scroll={{ x: 800 }}
       />
 
       {/* ─── ADD USER MODAL ─── */}
