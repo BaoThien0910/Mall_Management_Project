@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Query, Depends, HTTPException
 from typing import Optional, List
 from app.services import maintenance_service
-from app.dependencies import get_current_user
+from app.dependencies import get_principal, Principal
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 
@@ -15,7 +15,7 @@ async def list_tickets(
     location: Optional[str] = Query(None),
     skip: int = Query(0),
     limit: int = Query(10),
-    current_user: dict = Depends(get_current_user),
+    current_user: Principal = Depends(get_principal),
 ):
     """
     List maintenance tickets with filtering and pagination.
@@ -35,22 +35,22 @@ async def list_tickets(
         filters["location"] = location
     
     # Tenants see only their own requests
-    if current_user.get("role") == "tenant":
-        filters["created_by"] = current_user.get("email")
+    if current_user.role == "tenant":
+        filters["created_by"] = current_user.email
 
     result = maintenance_service.list_tickets(filters, skip, limit)
     return result
 
 
 @router.get("/tickets/{ticket_id}", summary="Get ticket details")
-async def get_ticket(ticket_id: str, current_user: dict = Depends(get_current_user)):
+async def get_ticket(ticket_id: str, current_user: Principal = Depends(get_principal)):
     """Get a specific maintenance ticket by ID."""
     ticket = maintenance_service.get_ticket(ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     # Tenants can only view their own tickets
-    if current_user.get("role") == "tenant" and ticket["created_by"] != current_user.get("email"):
+    if current_user.role == "tenant" and ticket["created_by"] != current_user.email:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
     return ticket
@@ -59,7 +59,7 @@ async def get_ticket(ticket_id: str, current_user: dict = Depends(get_current_us
 @router.post("/tickets", summary="Create maintenance ticket")
 async def create_ticket(
     ticket_data: dict,
-    current_user: dict = Depends(get_current_user),
+    current_user: Principal = Depends(get_principal),
 ):
     """
     Create a new maintenance ticket.
@@ -75,7 +75,7 @@ async def create_ticket(
     }
     ```
     """
-    if current_user.get("role") not in ["tenant", "staff"]:
+    if current_user.role not in ["tenant", "staff"]:
         raise HTTPException(status_code=403, detail="Only tenants and staff can create tickets")
 
     ticket = maintenance_service.create_ticket(
@@ -84,7 +84,7 @@ async def create_ticket(
         location=ticket_data.get("location"),
         category=ticket_data.get("category"),
         priority=ticket_data.get("priority", "medium"),
-        created_by=current_user.get("email"),
+        created_by=current_user.email,
     )
     return ticket
 
@@ -93,7 +93,7 @@ async def create_ticket(
 async def update_ticket_status(
     ticket_id: str,
     status_data: dict,
-    current_user: dict = Depends(get_current_user),
+    current_user: Principal = Depends(get_principal),
 ):
     """
     Update ticket status.
@@ -105,13 +105,13 @@ async def update_ticket_status(
     }
     ```
     """
-    if current_user.get("role") not in ["staff", "admin"]:
+    if current_user.role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff and admin can update status")
 
     ticket = maintenance_service.update_ticket_status(
         ticket_id=ticket_id,
         status=status_data.get("status"),
-        updated_by=current_user.get("email"),
+        updated_by=current_user.email,
     )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -123,7 +123,7 @@ async def update_ticket_status(
 async def assign_ticket(
     ticket_id: str,
     assign_data: dict,
-    current_user: dict = Depends(get_current_user),
+    current_user: Principal = Depends(get_principal),
 ):
     """
     Assign a ticket to a staff member.
@@ -135,7 +135,7 @@ async def assign_ticket(
     }
     ```
     """
-    if current_user.get("role") not in ["staff", "admin"]:
+    if current_user.role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff and admin can assign")
 
     ticket = maintenance_service.assign_ticket(
@@ -153,7 +153,7 @@ async def get_schedule(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     limit: int = Query(20),
-    current_user: dict = Depends(get_current_user),
+    current_user: Principal = Depends(get_principal),
 ):
     """
     Get scheduled maintenance events.
@@ -167,6 +167,6 @@ async def get_schedule(
 
 
 @router.get("/statistics", summary="Get maintenance statistics")
-async def get_statistics(current_user: dict = Depends(get_current_user)):
+async def get_statistics(current_user: Principal = Depends(get_principal)):
     """Get maintenance ticket statistics."""
     return maintenance_service.get_statistics()

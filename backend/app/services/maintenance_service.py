@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from enum import Enum
-
+from app.dependencies import get_principal, Principal
 
 class TicketStatus(str, Enum):
     """Maintenance ticket statuses."""
