@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import bootstrap_db
 from app.config import get_settings
-from app.routers import auth, finance
+from app.routers import auth, finance, maintenance, reports, notifications
 
 
 @asynccontextmanager
@@ -32,6 +32,9 @@ def create_application() -> FastAPI:
 
     app.include_router(auth.router, prefix="/api", tags=["auth"])
     app.include_router(finance.router, prefix="/api/finance", tags=["finance"])
+    app.include_router(maintenance.router)
+    app.include_router(reports.router)
+    app.include_router(notifications.router)
     return app
 
 

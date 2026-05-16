@@ -10,6 +10,12 @@ import PaymentPage from './pages/finance/PaymentPage';
 import PaymentResultPage from './pages/finance/PaymentResultPage';
 import InvoiceHistoryPage from './pages/finance/InvoiceHistoryPage';
 import FinancialImportPage from './pages/finance/FinancialImportPage';
+import MaintenanceDashboard from './pages/maintenance/MaintenanceDashboard';
+import MaintenanceDetailPage from './pages/maintenance/MaintenanceDetailPage';
+import CreateMaintenanceRequest from './pages/maintenance/CreateMaintenanceRequest';
+import MaintenanceScheduleCalendar from './pages/maintenance/MaintenanceScheduleCalendar';
+import ReportsDashboard from './pages/reports/ReportsDashboard';
+import AnnouncementsPage from './pages/notifications/AnnouncementsPage';
 import ComingSoonPage from './pages/placeholders/ComingSoonPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
@@ -48,10 +54,10 @@ export default function App() {
             <Route path="billing/pay/result" element={<PaymentResultPage />} />
             <Route path="billing/pay/:id" element={<PaymentPage />} />
             <Route path="billing/:id" element={<DebtDetailPage />} />
-            <Route
-              path="maintenance"
-              element={<ComingSoonPage title="Sự cố & bảo trì" description="Gửi yêu cầu sửa chữa, theo dõi xử lý." />}
-            />
+            <Route path="maintenance" element={<MaintenanceDashboard />} />
+            <Route path="maintenance/new" element={<CreateMaintenanceRequest />} />
+            <Route path="maintenance/:id" element={<MaintenanceDetailPage />} />
+            <Route path="maintenance/schedule/calendar" element={<MaintenanceScheduleCalendar />} />
           </Route>
         </Route>
 
@@ -73,10 +79,10 @@ export default function App() {
             <Route path="finance/import" element={<FinancialImportPage />} />
             <Route path="finance/invoices" element={<InvoiceHistoryPage />} />
             <Route path="finance/:id" element={<DebtDetailPage />} />
-            <Route
-              path="maintenance"
-              element={<ComingSoonPage title="Vận hành & bảo trì" description="Sự cố, phân công và lịch bảo trì." />}
-            />
+            <Route path="maintenance" element={<MaintenanceDashboard />} />
+            <Route path="maintenance/new" element={<CreateMaintenanceRequest />} />
+            <Route path="maintenance/:id" element={<MaintenanceDetailPage />} />
+            <Route path="maintenance/schedule/calendar" element={<MaintenanceScheduleCalendar />} />
           </Route>
         </Route>
 
@@ -87,8 +93,8 @@ export default function App() {
               element={<ComingSoonPage title="Ban quản lý" description="Dashboard phê duyệt và ra quyết định." />}
             />
             <Route path="approvals" element={<ComingSoonPage title="Phê duyệt yêu cầu" description="Thuê thêm, sự cố và các quyết định." />} />
-            <Route path="reports" element={<ComingSoonPage title="Báo cáo tổng hợp" description="Doanh thu, công nợ và KPI vận hành." />} />
-            <Route path="announcements" element={<ComingSoonPage title="Ban hành thông báo" description="Đăng và gửi thông báo tới các bên." />} />
+            <Route path="reports" element={<ReportsDashboard />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
           </Route>
         </Route>
 
