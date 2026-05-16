@@ -10,6 +10,7 @@ import {
   Space,
   Spin,
   message,
+  Empty,
 } from 'antd';
 import { ArrowLeftOutlined, CreditCardOutlined, DownloadOutlined } from '@ant-design/icons';
 import { fetchDebtById } from '../../services/debtService';
@@ -144,23 +145,29 @@ export default function DebtDetailPage() {
       <Title level={5} style={{ marginBottom: 16 }}>
         Chi tiết các khoản
       </Title>
-      <Table
-        columns={lineColumns}
-        dataSource={debt.lines || []}
-        pagination={false}
-        style={{ backgroundColor: '#fff', borderRadius: 8 }}
-        scroll={{ x: 600 }}
-        summary={() => (
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={2} align="end">
-              <Text strong>Tổng cộng</Text>
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={1} align="right">
-              <Text strong>{formatCurrency(debt.totalAmount)}</Text>
-            </Table.Summary.Cell>
-          </Table.Summary.Row>
-        )}
-      />
+      {(!debt.lines || debt.lines.length === 0) ? (
+        <Card>
+          <Empty description="Chưa có chi tiết từng khoản" />
+        </Card>
+      ) : (
+        <Table
+          columns={lineColumns}
+          dataSource={debt.lines || []}
+          pagination={false}
+          style={{ backgroundColor: '#fff', borderRadius: 8 }}
+          scroll={{ x: 600 }}
+          summary={() => (
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={2} align="end">
+                <Text strong>Tổng cộng</Text>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={1} align="right">
+                <Text strong>{formatCurrency(debt.totalAmount)}</Text>
+              </Table.Summary.Cell>
+            </Table.Summary.Row>
+          )}
+        />
+      )}
     </>
   );
 }

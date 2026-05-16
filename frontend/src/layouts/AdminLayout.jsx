@@ -1,6 +1,7 @@
 // src/layouts/AdminLayout.jsx
 import React, { useState } from 'react';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { Layout, Menu, Input, Avatar, Badge, Typography, Button, Drawer, Grid } from 'antd';
 import { 
   DashboardOutlined,  
@@ -12,12 +13,18 @@ import {
   HistoryOutlined
 } from '@ant-design/icons';
 
+import AppBreadcrumb from '../components/layout/AppBreadcrumb';
+import { logout } from '../store/authSlice';
+import { clearCodes } from '../store/permissionSlice';
+
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
 const { useBreakpoint } = Grid; // 🌟 This reads the exact screen size!
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
   const screens = useBreakpoint();
   
   // If the screen is smaller than 'lg' (Large/Desktop), we consider it mobile
@@ -27,9 +34,9 @@ export default function AdminLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleLogout = () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("role");
-    navigate("/login");
+    dispatch(logout());
+    dispatch(clearCodes());
+    navigate('/login');
   };
 
   const handleMenuClick = (path) => {
@@ -54,7 +61,7 @@ export default function AdminLayout() {
         <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Quản trị hệ thống</Title>
       </div>
       
-      <Menu mode="inline" defaultSelectedKeys={['/']} items={menuItems} style={{ borderRight: 0, flex: 1, padding: '16px 0' }} />
+      <Menu mode="inline" selectedKeys={[location.pathname]} items={menuItems} style={{ borderRight: 0, flex: 1, padding: '16px 0' }} />
       <Menu mode="inline" selectable={false} items={[{ key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', onClick: handleLogout }]} style={{ borderTop: '1px solid #f0f0f0', padding: '16px 0' }} />
     </div>
   );
@@ -105,8 +112,9 @@ export default function AdminLayout() {
           </div>
         </Header>
 
-        <Content style={{ margin: '24px 32px', overflow: 'initial' }}>
-          <Outlet /> 
+        <Content style={{ margin: isMobile ? '16px 12px 24px' : '24px 32px', overflow: 'initial' }}>
+          <AppBreadcrumb />
+          <Outlet />
         </Content>
       </Layout>
     </Layout>

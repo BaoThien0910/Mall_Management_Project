@@ -1,15 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Table, Typography, Card, Space, Input, DatePicker, Button, Tag } from 'antd';
+import {
+  Table,
+  Typography,
+  Card,
+  Space,
+  Input,
+  DatePicker,
+  Button,
+  Tag,
+  Skeleton,
+  Empty,
+  message,
+} from 'antd';
 import { SearchOutlined, ArrowLeftOutlined, DownloadOutlined } from '@ant-design/icons';
-import { MOCK_INVOICES } from '../../services/paymentService';
+import { fetchInvoices } from '../../services/paymentService';
 import { PAYMENT_METHODS } from '../../constants/financeConstants';
 import { formatCurrency, formatDate } from '../../utils/format';
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
-
-const TENANT_NAME = 'Starbucks';
 
 export default function InvoiceHistoryPage() {
   const navigate = useNavigate();
@@ -18,23 +28,37 @@ export default function InvoiceHistoryPage() {
   const basePath = isTenant ? '/tenant/billing' : '/staff/finance';
 
   const [search, setSearch] = useState('');
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const list = await fetchInvoices({ limit: 500, skip: 0 });
+        if (!cancelled) setRows(list);
+      } catch {
+        if (!cancelled) message.error('Không tải được lịch sử hóa đơn');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const invoices = useMemo(() => {
-    let list = MOCK_INVOICES;
-    if (isTenant) {
-      list = list.filter((i) => i.tenant === TENANT_NAME);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (i) =>
-          i.invoiceNo.toLowerCase().includes(q) ||
-          i.debtId.toLowerCase().includes(q) ||
-          i.tenant.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [isTenant, search]);
+    if (!search) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (i) =>
+        (i.invoiceNo || '').toLowerCase().includes(q) ||
+        (i.debtId || '').toLowerCase().includes(q) ||
+        (i.tenant || '').toLowerCase().includes(q)
+    );
+  }, [rows, search]);
 
   const methodMap = Object.fromEntries(PAYMENT_METHODS.map((m) => [m.value, m.label]));
 
@@ -77,11 +101,7 @@ export default function InvoiceHistoryPage() {
 
   return (
     <>
-      <Button
-        icon={<ArrowLeftOutlined />}
-        style={{ marginBottom: 16 }}
-        onClick={() => navigate(basePath)}
-      >
+      <Button icon={<ArrowLeftOutlined />} style={{ marginBottom: 16 }} onClick={() => navigate(basePath)}>
         Quay lại
       </Button>
 
@@ -103,13 +123,23 @@ export default function InvoiceHistoryPage() {
         </Space>
       </Card>
 
-      <Table
-        columns={columns}
-        dataSource={invoices}
-        style={{ backgroundColor: '#fff', borderRadius: 8 }}
-        pagination={{ pageSize: 10 }}
-        scroll={{ x: 900 }}
-      />
+      {loading && rows.length === 0 ? (
+        <Skeleton active paragraph={{ rows: 8 }} />
+      ) : invoices.length === 0 ? (
+        <Card>
+          <Empty description="Chưa có hóa đơn" />
+        </Card>
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={invoices}
+          loading={loading}
+          style={{ backgroundColor: '#fff', borderRadius: 8 }}
+          pagination={{ pageSize: 10 }}
+          locale={{ emptyText: 'Không có dữ liệu' }}
+          scroll={{ x: 900 }}
+        />
+      )}
     </>
   );
 }

@@ -1,14 +1,18 @@
-name: tttm
+name: mall-management-backend
 channels:
   - conda-forge
   - defaults
 dependencies:
-  # this file is not finished
-  - python=3.10
-  - numpy
-  - pandas
-  - matplotlib
+  - python=3.11
   - pip
-  - fastapi 
-  - pydantic
-  - "uvicorn[standard]"
+  - pip:
+    - fastapi>=0.115.0
+    - uvicorn[standard]>=0.32.0
+    - sqlalchemy>=2.0.36
+    - pydantic>=2.10.0
+    - pydantic-settings>=2.6.0
+    - python-jose[cryptography]>=3.3.0
+    - bcrypt>=4.2.0
+    - python-multipart>=0.0.17
+    - greenlet>=3.1.0
+    - openpyxl>=3.1.0

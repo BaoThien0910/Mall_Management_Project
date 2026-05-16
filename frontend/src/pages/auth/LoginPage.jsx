@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { Form, Input, Button, Checkbox, Typography, Row, Col, message } from 'antd';
 import { MailOutlined, LockOutlined, ArrowRightOutlined, CheckCircleFilled } from '@ant-design/icons';
 import { loginAPI } from '../../services/authService';
+import { setCredentials } from '../../store/authSlice';
+import { setCodes } from '../../store/permissionSlice';
 
 // Import your background image! (Adjust the path if yours is named differently)
 import mallBg from '../../assets/mall-bg.jpg'; 
@@ -12,6 +15,7 @@ const { Title, Text } = Typography;
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -26,13 +30,18 @@ export default function LoginPage() {
       const data = await loginAPI(payload); 
       
       // 1. SECURE STORAGE: Save to session memory instead of local storage
-      sessionStorage.setItem("token", data.token);
-      sessionStorage.setItem("role", data.role);
-      
-      message.success("Đăng nhập thành công!"); 
+      dispatch(
+        setCredentials({
+          token: data.token,
+          role: data.role,
+          email: data.email ?? values.email,
+        })
+      );
+      dispatch(setCodes(data.permissions ?? []));
 
-      // 2. THE SMART ROUTER: Send user to their specific layout
-      if (data.role === "admin") {
+      message.success('Đăng nhập thành công!');
+
+      if (data.role === 'admin') {
         navigate("/admin");
       } else if (data.role === "tenant") {
         navigate("/tenant");

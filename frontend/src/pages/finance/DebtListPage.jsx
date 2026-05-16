@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Table,
@@ -12,6 +12,8 @@ import {
   Row,
   Col,
   Statistic,
+  Skeleton,
+  Empty,
 } from 'antd';
 import {
   SearchOutlined,
@@ -21,14 +23,12 @@ import {
   UploadOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
-import { MOCK_DEBTS } from '../../services/debtService';
+import { fetchDebts } from '../../services/debtService';
 import { DEBT_STATUS } from '../../constants/financeConstants';
 import { formatCurrency, formatDate } from '../../utils/format';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-const TENANT_NAME = 'Starbucks';
 
 export default function DebtListPage() {
   const navigate = useNavigate();
@@ -37,27 +37,43 @@ export default function DebtListPage() {
   const basePath = isTenant ? '/tenant/billing' : '/staff/finance';
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const [rawRows, setRawRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const debts = useMemo(() => {
-    let list = MOCK_DEBTS;
-    if (isTenant) {
-      list = list.filter((d) => d.tenant === TENANT_NAME);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (d) =>
-          d.id.toLowerCase().includes(q) ||
-          d.tenant.toLowerCase().includes(q) ||
-          d.premise.toLowerCase().includes(q)
-      );
-    }
-    if (statusFilter) {
-      list = list.filter((d) => d.status === statusFilter);
-    }
-    return list;
-  }, [isTenant, search, statusFilter]);
+  useEffect(() => {
+    const h = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => window.clearTimeout(h);
+  }, [search]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = {
+          q: debouncedSearch || undefined,
+          statusFil: statusFilter || undefined,
+          limit: 500,
+          skip: 0,
+        };
+        const rows = await fetchDebts(params);
+        if (!cancelled) setRawRows(rows);
+      } catch (e) {
+        if (!cancelled) setError(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, statusFilter]);
+
+  const debts = useMemo(() => rawRows, [rawRows]);
 
   const summary = useMemo(() => {
     const remaining = debts.reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
@@ -110,8 +126,8 @@ export default function DebtListPage() {
       dataIndex: 'status',
       key: 'status',
       width: 150,
-      render: (status) => {
-        const cfg = DEBT_STATUS[status] || { label: status, color: 'default' };
+      render: (st) => {
+        const cfg = DEBT_STATUS[st] || { label: st, color: 'default' };
         return <Tag color={cfg.color}>{cfg.label}</Tag>;
       },
     },
@@ -148,6 +164,8 @@ export default function DebtListPage() {
     },
   ];
 
+  const tableSkeleton = loading && debts.length === 0;
+
   return (
     <>
       <div
@@ -183,22 +201,34 @@ export default function DebtListPage() {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
           <Card style={{ borderRadius: 8 }}>
-            <Statistic title="Số kỳ công nợ" value={summary.count} />
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 1 }} />
+            ) : (
+              <Statistic title="Số kỳ công nợ" value={summary.count} />
+            )}
           </Card>
         </Col>
         <Col xs={24} sm={8}>
           <Card style={{ borderRadius: 8 }}>
-            <Statistic
-              title="Tổng còn phải trả"
-              value={summary.remaining}
-              formatter={(v) => formatCurrency(v)}
-              valueStyle={{ color: '#cf1322', fontSize: 18 }}
-            />
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 1 }} />
+            ) : (
+              <Statistic
+                title="Tổng còn phải trả"
+                value={summary.remaining}
+                formatter={(v) => formatCurrency(v)}
+                valueStyle={{ color: '#cf1322', fontSize: 18 }}
+              />
+            )}
           </Card>
         </Col>
         <Col xs={24} sm={8}>
           <Card style={{ borderRadius: 8 }}>
-            <Statistic title="Kỳ quá hạn" value={summary.overdue} valueStyle={{ color: '#fa8c16' }} />
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 1 }} />
+            ) : (
+              <Statistic title="Kỳ quá hạn" value={summary.overdue} valueStyle={{ color: '#fa8c16' }} />
+            )}
           </Card>
         </Col>
       </Row>
@@ -229,14 +259,27 @@ export default function DebtListPage() {
         </Space>
       </Card>
 
-      <Table
-        columns={columns}
-        dataSource={debts.map((d) => ({ ...d, key: d.id }))}
-        style={{ backgroundColor: '#fff', borderRadius: 8 }}
-        pagination={{ pageSize: 10 }}
-        scroll={{ x: isTenant ? 900 : 1100 }}
-      />
+      {error ? (
+        <Card>
+          <Empty description={`Không tải được dữ liệu: ${error.message || ''}`} />
+        </Card>
+      ) : tableSkeleton ? (
+        <Skeleton active paragraph={{ rows: 6 }} />
+      ) : debts.length === 0 ? (
+        <Card>
+          <Empty description="Chưa có công nợ phù hợp" />
+        </Card>
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={debts.map((d) => ({ ...d, key: d.id }))}
+          style={{ backgroundColor: '#fff', borderRadius: 8 }}
+          pagination={{ pageSize: 10 }}
+          loading={loading}
+          locale={{ emptyText: 'Không có bản ghi' }}
+          scroll={{ x: isTenant ? 900 : 1100 }}
+        />
+      )}
     </>
   );
 }
-

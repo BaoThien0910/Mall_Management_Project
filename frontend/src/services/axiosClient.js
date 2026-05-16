@@ -1,24 +1,39 @@
 import axios from 'axios';
+import { store } from '../store';
+import { logout } from '../store/authSlice';
+import { clearCodes } from '../store/permissionSlice';
+
+const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
 
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: BASE.replace(/\/$/, ''),
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// 🌟 THE INTERCEPTOR 🌟
-// Before any request leaves the app, intercept it and attach the token!
 axiosClient.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('token');
     if (token) {
-      // This is the exact format Python FastAPI expects!
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
+  (error) => Promise.reject(error)
+);
+
+axiosClient.interceptors.response.use(
+  (r) => r,
   (error) => {
+    const status = error.response?.status;
+    if (status === 401) {
+      store.dispatch(logout());
+      store.dispatch(clearCodes());
+      if (!window.location.pathname.includes('/login')) {
+        window.location.assign('/login');
+      }
+    }
     return Promise.reject(error);
   }
 );

@@ -1,53 +1,38 @@
-from fastapi import FastAPI, HTTPException
+"""Khởi tạo ứng dụng."""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
 
-app = FastAPI()
+from app.bootstrap import bootstrap_db
+from app.config import get_settings
+from app.routers import auth, finance
 
-# --- CORS Configuration ---
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# --- Pydantic Models ---
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-    remember: Optional[bool] = False
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    bootstrap_db(seed=True)
+    yield
 
-# --- API Endpoints ---
-@app.post("/api/login")
-async def login(request: LoginRequest):
-    # Our mock database with CHEAT CODES for ultra-fast testing!
-    mock_users = {
-        # Standard Accounts
-        "admin@mainplaza.com": {"password": "admin123", "role": "admin"},
-        "tenant@mainplaza.com": {"password": "tenant123", "role": "tenant"},
-        "staff@mainplaza.com": {"password": "staff123", "role": "staff"},
-        "board@mainplaza.com": {"password": "board123", "role": "management"},
-        
-        # 🌟 Cheat Code Accounts (Password is just "1") DELETE WHEN DONE
-        "a": {"password": "1", "role": "admin"},
-        "t": {"password": "1", "role": "tenant"},
-        "s": {"password": "1", "role": "staff"},
-        "b": {"password": "1", "role": "management"}
-    }
 
-    user = mock_users.get(request.email)
+def create_application() -> FastAPI:
+    settings = get_settings()
+    origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 
-    if user and user["password"] == request.password:
-        return {
-            "token": f"super_secret_token_for_{user['role']}",
-            "role": user["role"],
-            "message": "Login successful"
-        }
-    else:
-        raise HTTPException(
-            status_code=401, 
-            detail="Sai email hoặc mật khẩu!" 
-        )
+    app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins or ["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(auth.router, prefix="/api", tags=["auth"])
+    app.include_router(finance.router, prefix="/api/finance", tags=["finance"])
+    return app
+
+
+app = create_application()
