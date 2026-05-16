@@ -9,20 +9,18 @@ import {
   Statistic,
   Spin,
   message,
-  LineChart,
-  BarChart,
-  Table,
-  Tag,
   Tabs,
   Space,
   Select,
+  Table,
+  Tag,
 } from 'antd';
 import {
   AreaChart,
   Area,
-  LineChart as RechartLineChart,
+  LineChart,
   Line,
-  BarChart as RechartBarChart,
+  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -187,7 +185,7 @@ export default function ReportsDashboard() {
 
                   <div style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
                     <ResponsiveContainer width="100%" height={300}>
-                      <RechartLineChart data={revenueData.data}>
+                      <LineChart data={revenueData.data}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
@@ -213,7 +211,7 @@ export default function ReportsDashboard() {
                           stroke="#faad14"
                           name="Dịch vụ"
                         />
-                      </RechartLineChart>
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
