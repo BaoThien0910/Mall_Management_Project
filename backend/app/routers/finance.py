@@ -12,6 +12,7 @@ from app.schemas.congno import DebtDetailOut
 from app.schemas.payment import PaymentBody, PaymentResult
 from app.services import billing_service, excel_import_service, invoice_service
 from app.services.payment_service import process_payment_simulation
+from app.utils.response import success_response  # <-- Thêm import
 
 router = APIRouter()
 
@@ -30,10 +31,10 @@ async def list_debts(
     envelope = billing_service.list_debts(
         db, principal, skip=skip, limit=limit, search=q, status_filter=statusFil
     )
-    return envelope.model_dump(mode="json")
+    return success_response(data=envelope.model_dump(mode="json"), message="Lấy danh sách công nợ thành công")
 
 
-@router.get("/debts/{ma}", response_model=DebtDetailOut)
+@router.get("/debts/{ma}")
 async def debt_detail(
     ma: str,
     principal: Annotated[
@@ -44,7 +45,7 @@ async def debt_detail(
     detail = billing_service.get_debt_detail(db, ma, principal)
     if detail is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy.")
-    return detail
+    return success_response(data=detail, message="Lấy chi tiết công nợ thành công")
 
 
 class CalculateBody(BaseModel):
@@ -58,17 +59,24 @@ async def calculate_cycle(
     body: CalculateBody | None = Body(default=None),
 ):
     _ = body
-    return billing_service.simulate_calculate_cycle(db)
+    result = billing_service.simulate_calculate_cycle(db)
+    return success_response(data=result, message="Đã thực hiện tính toán công nợ")
 
 
-@router.post("/payments", response_model=PaymentResult)
+@router.post("/payments")
 async def create_payment(
     payload: PaymentBody,
     principal: Annotated[Principal, Depends(require_permissions("finance.pay"))],
     db: Session = Depends(get_db),
 ):
     result = process_payment_simulation(db, principal, payload)
-    return PaymentResult(success=result.success, transactionId=result.transactionId, paidAt=result.paidAt, detail=result.detail)
+    payment_data = PaymentResult(
+        success=result.success, 
+        transactionId=result.transactionId, 
+        paidAt=result.paidAt, 
+        detail=result.detail
+    )
+    return success_response(data=payment_data, message="Thực hiện thanh toán thành công")
 
 
 @router.get("/invoices")
@@ -82,6 +90,7 @@ async def list_invoice(
 ):
     envelope = invoice_service.list_invoices(db, principal, skip=skip, limit=limit)
     data = envelope.model_dump(mode="json")
+    # Gắn thêm 'key' cho bảng của Frontend (Ant Design thường dùng 'key')
     data["items"] = [
         {
             **item,
@@ -89,7 +98,7 @@ async def list_invoice(
         }
         for item in data.get("items", [])
     ]
-    return data
+    return success_response(data=data, message="Lấy danh sách hóa đơn thành công")
 
 
 @router.post("/import")
@@ -99,4 +108,5 @@ async def finance_import_excel(
     file: UploadFile = File(...),
 ):
     data = await file.read()
-    return excel_import_service.ingest_financial_upload(db, data, file.filename or "unknown.xlsx")
+    result = excel_import_service.ingest_financial_upload(db, data, file.filename or "unknown.xlsx")
+    return success_response(data=result, message="Nhập dữ liệu Excel thành công")

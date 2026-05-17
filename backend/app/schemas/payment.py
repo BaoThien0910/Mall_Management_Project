@@ -24,11 +24,23 @@ class PaymentResult(BaseModel):
 class InvoiceRow(BaseModel):
     invoiceNo: str
     debtId: str
-    tenant: str
-    period: str
-    amount: int
-    paidAt: str
+    tenant: str | None = None
+    period: str | None = None
+    amount: float
+    paidAt: datetime
     method: str
+
+    @classmethod
+    def from_hoadon(cls, h, tenant_name: str = "", period_str: str = "") -> "InvoiceRow":
+        return cls(
+            invoiceNo=h.ma_hd,       # Đã sửa thành ma_hd
+            debtId=h.ma_congno,      # Đã sửa thành ma_congno
+            tenant=tenant_name,
+            period=period_str,
+            amount=float(h.so_tien),
+            paidAt=h.ngay_tt,        # Đã sửa thành ngay_tt
+            method=h.phuong_thuc
+        )
 
 
 class InvoiceListEnvelope(BaseModel):

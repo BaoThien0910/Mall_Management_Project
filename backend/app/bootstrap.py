@@ -1,164 +1,171 @@
 """Seed DB on startup."""
 
-import json
-from datetime import UTC, datetime, date
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.database import Base, SessionLocal, engine
-from app.models import CongNo, HoaDon, TaiKhoan
 from app.utils.security import hash_password
 
 
-def _seed_invoices_demo(db: Session) -> None:
-    if db.query(HoaDon).first() is not None:
-        return
+def _seed_rbac_data(db: Session) -> None:
+    """Seed dữ liệu nền tảng cho hệ thống phân quyền (RBAC)."""
+    
+    # 1. VAITRO (Đã bổ sung cột TRANGTHAI)
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.VAITRO)
+        BEGIN
+            INSERT INTO dbo.VAITRO (MAVAITRO, TENVAITRO, MOTA, TRANGTHAI)
+            VALUES 
+                ('admin', N'Quản trị viên', N'Toàn quyền quản trị hệ thống', N'Đang dùng'),
+                ('management', N'Ban quản lý', N'Điều hành các hoạt động TTTM', N'Đang dùng'),
+                ('staff', N'Nhân viên', N'Nhân viên vận hành và kế toán', N'Đang dùng'),
+                ('tenant', N'Khách thuê', N'Khách hàng thuê mặt bằng', N'Đang dùng');
+        END
+    """))
 
-    ts = datetime(2025, 10, 3, tzinfo=UTC)
-    db.add_all(
-        [
-            HoaDon(
-                so_hoa_don="INV-2025-0988",
-                ma_congno="DEB-2025-003",
-                so_tien=28500000,
-                ngay_tt=ts,
-                phuong_thuc="bank_transfer",
-                ma_giao_dich=f"TXN-SEED-{uuid4().hex[:12].upper()}",
-            ),
-            HoaDon(
-                so_hoa_don="INV-2025-0910",
-                ma_congno="DEB-2025-001",
-                so_tien=42000000,
-                ngay_tt=datetime(2025, 10, 1, tzinfo=UTC),
-                phuong_thuc="momo",
-                ma_giao_dich=f"TXN-SEED-{uuid4().hex[:12].upper()}",
-            ),
-        ]
-    )
+    # 2. QUYEN (Đã bổ sung cột MODULE và HANHDONG chuẩn theo Constraint)
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.QUYEN)
+        BEGIN
+            INSERT INTO dbo.QUYEN (MAQUYEN, TENQUYEN, MODULE, HANHDONG, MOTA)
+            VALUES 
+                ('SYS_VIEW', N'Xem hệ thống', 'Hệ thống', 'Xem', N'Dành cho Admin'),
+                ('FIN_READ', N'Xem tài chính', 'Tài chính', 'Xem', N'Xem công nợ, hóa đơn'),
+                ('FIN_WRITE', N'Quản lý tài chính', 'Tài chính', 'Tạo', N'Tạo công nợ, hóa đơn'),
+                ('PRE_READ', N'Xem mặt bằng', 'Mặt bằng', 'Xem', N'Xem danh sách mặt bằng'),
+                ('PRE_WRITE', N'Quản lý mặt bằng', 'Mặt bằng', 'Sửa', N'Cập nhật trạng thái mặt bằng'),
+                ('TENANT_OWN', N'Dữ liệu cá nhân', 'Hợp đồng', 'Xem', N'Khách xem dữ liệu của mình');
+        END
+    """))
+
+    # 3. VAITRO_QUYEN
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.VAITRO_QUYEN)
+        BEGIN
+            INSERT INTO dbo.VAITRO_QUYEN (MAVAITRO, MAQUYEN)
+            VALUES 
+                ('admin', 'SYS_VIEW'),
+                ('management', 'FIN_READ'), ('management', 'PRE_READ'), ('management', 'PRE_WRITE'),
+                ('staff', 'FIN_READ'), ('staff', 'FIN_WRITE'), ('staff', 'PRE_READ'),
+                ('tenant', 'TENANT_OWN');
+        END
+    """))
+
+
+def _seed_master_data(db: Session) -> None:
+    """Seed các dữ liệu Master bắt buộc (Nhân viên, Khách thuê, Mặt bằng, Hợp đồng)"""
+    
+    # Nhân viên
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.NHANVIEN)
+        BEGIN
+            INSERT INTO dbo.NHANVIEN (MANV, HOTEN, PHONGBAN, CHUCVU, TRANGTHAI)
+            VALUES 
+                ('NV_ADMIN', N'Nguyễn Admin', N'Quản trị hệ thống', N'Quản trị viên', N'Đang làm'),
+                ('NV_STAFF', N'Trần Staff', N'Kinh doanh - Tài chính', N'Nhân viên', N'Đang làm'),
+                ('NV_MNG', N'Lê Manager', N'Ban Quản Lý', N'Ban Quản Lý', N'Đang làm'),
+                ('NV_GUEST', N'Khách vãng lai', N'Quản trị hệ thống', N'Nhân viên', N'Đang làm');
+        END
+    """))
+
+    # Khách thuê
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.KHACHTHUE)
+        BEGIN
+            INSERT INTO dbo.KHACHTHUE (MAKH, TENKHACH, CCCD_MST, TRANGTHAI)
+            VALUES 
+                ('KH_STARBUCKS', N'Starbucks Vietnam', '0312345678', N'Đang thuê');
+        END
+    """))
+
+    # Mặt bằng
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.MATBANG)
+        BEGIN
+            INSERT INTO dbo.MATBANG (MAMB, VITRI, TANG, DIENTICH, LOAIMB, TRANGTHAI)
+            VALUES 
+                ('GF-01', N'Mặt tiền cổng chính', 1, 150.50, N'F&B', N'Đang thuê');
+        END
+    """))
+
+    # Hợp đồng
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.HOPDONG)
+        BEGIN
+            INSERT INTO dbo.HOPDONG (MAHD, MAKH, MAMB, MANV_SOHOA, NGAYBATDAU, NGAYKETTHUC, GIATHUETHANG, TRANGTHAI)
+            VALUES 
+                ('HD-2025-001', 'KH_STARBUCKS', 'GF-01', 'NV_STAFF', '2025-01-01', '2028-12-31', 38000000, N'Đang hiệu lực');
+        END
+    """))
+
+
+def _seed_accounts(db: Session) -> None:
+    """Seed tài khoản (Yêu cầu phải có Nhân viên và Khách thuê trước)"""
+    
+    pwd_hash = hash_password("1")
+    
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.TAIKHOAN)
+        BEGIN
+            INSERT INTO dbo.TAIKHOAN (MATK, TENDANGNHAP, MATKHAU, MANV, MAKH, MAVAITRO, TRANGTHAI)
+            VALUES 
+                ('TK_01', 'a', :pwd, 'NV_ADMIN', NULL, 'admin', N'Hoạt động'),
+                ('TK_02', 'b', :pwd, 'NV_MNG', NULL, 'management', N'Hoạt động'),
+                ('TK_03', 's', :pwd, 'NV_STAFF', NULL, 'staff', N'Hoạt động'),
+                ('TK_04', 't', :pwd, NULL, 'KH_STARBUCKS', 'tenant', N'Hoạt động'),
+                ('GUEST', 'system_guest', :pwd, 'NV_GUEST', NULL, 'admin', N'Hoạt động');
+        END
+    """), {"pwd": pwd_hash})
+
+
+def _seed_finance_data(db: Session) -> None:
+    """Seed Công nợ và Hóa đơn chuẩn theo cấu trúc DDL"""
+    
+    # Công nợ
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.CONGNO)
+        BEGIN
+            -- Lưu ý: TONGTIEN = TIENTHUE + TIENDIEN + TIENNUOC + PHIBAOTRI - TIENHOAN
+            INSERT INTO dbo.CONGNO (MACN, MAHD, THANG, NAM, TIENTHUE, TIENDIEN, TIENNUOC, PHIBAOTRI, TIENHOAN, TONGTIEN, HAN_THANHTOAN, TRANGTHAI)
+            VALUES 
+                ('CN-10-2025', 'HD-2025-001', 10, 2025, 38000000, 5200000, 1800000, 0, 0, 45000000, '2025-11-05', N'Chưa thanh toán');
+        END
+    """))
+
+    # Hóa đơn
+    db.execute(text("""
+        IF NOT EXISTS (SELECT 1 FROM dbo.HOADON)
+        BEGIN
+            INSERT INTO dbo.HOADON (MAHOADON, MACN, MAKH, TIENTHUE, TIENDIEN, TIENNUOC, PHIBAOTRI, TIENHOAN, TONGTIEN, SOTIEN, PHUONGTHUC, TRANGTHAI)
+            VALUES 
+                ('INV-2025-01', 'CN-10-2025', 'KH_STARBUCKS', 38000000, 5200000, 1800000, 0, 0, 45000000, 45000000, N'VNPay', N'Thành công');
+        END
+    """))
 
 
 def bootstrap_db(seed: bool = True) -> None:
+    # Lệnh tạo bảng qua ORM (có thể bỏ qua nếu bạn đã chạy file DDL bằng SSMS)
     Base.metadata.create_all(bind=engine)
+    
     if not seed:
         return
 
     db: Session = SessionLocal()
     try:
-        if db.query(TaiKhoan).first() is None:
-            users = [
-                TaiKhoan(
-                    email_dang_nhap="a",
-                    mat_khau_bam=hash_password("1"),
-                    vai_tro_ma="admin",
-                    ma_khach_dai_dien=None,
-                ),
-                TaiKhoan(
-                    email_dang_nhap="t",
-                    mat_khau_bam=hash_password("1"),
-                    vai_tro_ma="tenant",
-                    ma_khach_dai_dien="STARBUCKS",
-                ),
-                TaiKhoan(
-                    email_dang_nhap="s",
-                    mat_khau_bam=hash_password("1"),
-                    vai_tro_ma="staff",
-                    ma_khach_dai_dien=None,
-                ),
-                TaiKhoan(
-                    email_dang_nhap="b",
-                    mat_khau_bam=hash_password("1"),
-                    vai_tro_ma="management",
-                    ma_khach_dai_dien=None,
-                ),
-            ]
-            db.add_all(users)
-
-            lines_starbucks = [
-                {
-                    "key": "1",
-                    "type": "rent",
-                    "description": "Tiền thuê mặt bằng tháng 10/2025",
-                    "amount": 38000000,
-                },
-                {"key": "2", "type": "utility", "description": "Điện nước (chỉ số T10)", "amount": 5200000},
-                {"key": "3", "type": "service", "description": "Phí dịch vụ chung", "amount": 1200000},
-                {"key": "4", "type": "penalty", "description": "Phạt chậm trả (5 ngày)", "amount": 600000},
-            ]
-            debts = [
-                CongNo(
-                    ma_congno="DEB-2025-001",
-                    ten_khach_thue="Starbucks",
-                    ma_khach="STARBUCKS",
-                    ma_matbang="GF-01",
-                    ky_thanh_toan="10/2025",
-                    ngay_den_han=date(2025, 11, 5),
-                    tong_phat_sinh=45000000,
-                    da_thanh_toan=0,
-                    trang_thai="overdue",
-                    ghi_chu="Công nợ tạo từ hợp đồng (mô phỏng)",
-                    chi_tiet_json=json.dumps(lines_starbucks, ensure_ascii=False),
-                ),
-                CongNo(
-                    ma_congno="DEB-2025-002",
-                    ten_khach_thue="Uniqlo",
-                    ma_khach="UNIQLO",
-                    ma_matbang="L2-12",
-                    ky_thanh_toan="10/2025",
-                    ngay_den_han=date(2025, 11, 10),
-                    tong_phat_sinh=82000000,
-                    da_thanh_toan=41000000,
-                    trang_thai="partial",
-                    ghi_chu=None,
-                    chi_tiet_json=json.dumps(
-                        [
-                            {
-                                "key": "1",
-                                "type": "rent",
-                                "description": "Tiền thuê tháng 10/2025",
-                                "amount": 75000000,
-                            },
-                            {
-                                "key": "2",
-                                "type": "utility",
-                                "description": "Điện nước",
-                                "amount": 7000000,
-                            },
-                        ],
-                        ensure_ascii=False,
-                    ),
-                ),
-                CongNo(
-                    ma_congno="DEB-2025-003",
-                    ten_khach_thue="Highlands Coffee",
-                    ma_khach="HIGHLANDS",
-                    ma_matbang="GF-08",
-                    ky_thanh_toan="09/2025",
-                    ngay_den_han=date(2025, 10, 5),
-                    tong_phat_sinh=28500000,
-                    da_thanh_toan=28500000,
-                    trang_thai="paid",
-                    ghi_chu=None,
-                    chi_tiet_json=None,
-                ),
-                CongNo(
-                    ma_congno="DEB-2025-004",
-                    ten_khach_thue="Starbucks",
-                    ma_khach="STARBUCKS",
-                    ma_matbang="GF-01",
-                    ky_thanh_toan="11/2025",
-                    ngay_den_han=date(2025, 12, 5),
-                    tong_phat_sinh=45000000,
-                    da_thanh_toan=0,
-                    trang_thai="unpaid",
-                    ghi_chu=None,
-                    chi_tiet_json=None,
-                ),
-            ]
-            db.add_all(debts)
-            db.commit()
-
-        _seed_invoices_demo(db)
+        # Chạy theo thứ tự để không vi phạm Khóa Ngoại (Foreign Keys)
+        _seed_rbac_data(db)
+        _seed_master_data(db)
+        _seed_accounts(db)
+        _seed_finance_data(db)
+        
         db.commit()
+        print("✅ Seed toàn bộ dữ liệu thành công!")
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Lỗi khi seed dữ liệu: {str(e)}")
+        raise e
     finally:
         db.close()

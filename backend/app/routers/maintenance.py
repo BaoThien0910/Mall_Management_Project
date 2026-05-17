@@ -1,9 +1,11 @@
 """Maintenance router for handling maintenance requests and schedules."""
 
 from fastapi import APIRouter, Query, Depends, HTTPException
-from typing import Optional, List
+from typing import Optional
 from app.services import maintenance_service
 from app.dependencies import get_principal, Principal
+from app.schemas.maintenance import TicketCreate, TicketUpdateStatus, TicketAssign
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 
@@ -17,135 +19,86 @@ async def list_tickets(
     limit: int = Query(10),
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    List maintenance tickets with filtering and pagination.
-    
-    - **status**: Filter by status (open, in_progress, resolved, closed)
-    - **priority**: Filter by priority (low, medium, high, urgent)
-    - **location**: Filter by location keyword
-    - **skip**: Pagination offset
-    - **limit**: Pagination limit
-    """
     filters = {}
-    if status:
-        filters["status"] = status
-    if priority:
-        filters["priority"] = priority
-    if location:
-        filters["location"] = location
+    if status: filters["status"] = status
+    if priority: filters["priority"] = priority
+    if location: filters["location"] = location
     
-    # Tenants see only their own requests
     if current_user.role == "tenant":
         filters["created_by"] = current_user.email
 
     result = maintenance_service.list_tickets(filters, skip, limit)
-    return result
+    return success_response(data=result, message="Lấy danh sách sự cố thành công")
 
 
 @router.get("/tickets/{ticket_id}", summary="Get ticket details")
 async def get_ticket(ticket_id: str, current_user: Principal = Depends(get_principal)):
-    """Get a specific maintenance ticket by ID."""
     ticket = maintenance_service.get_ticket(ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
-    # Tenants can only view their own tickets
     if current_user.role == "tenant" and ticket["created_by"] != current_user.email:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
-    return ticket
+    return success_response(data=ticket, message="Lấy chi tiết sự cố thành công")
 
 
 @router.post("/tickets", summary="Create maintenance ticket")
 async def create_ticket(
-    ticket_data: dict,
+    ticket_data: TicketCreate,
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Create a new maintenance ticket.
-    
-    Request body:
-    ```json
-    {
-        "title": "string",
-        "description": "string",
-        "location": "string",
-        "category": "string",
-        "priority": "string"
-    }
-    ```
-    """
     if current_user.role not in ["tenant", "staff"]:
         raise HTTPException(status_code=403, detail="Only tenants and staff can create tickets")
 
     ticket = maintenance_service.create_ticket(
-        title=ticket_data.get("title"),
-        description=ticket_data.get("description"),
-        location=ticket_data.get("location"),
-        category=ticket_data.get("category"),
-        priority=ticket_data.get("priority", "medium"),
+        title=ticket_data.title,
+        description=ticket_data.description,
+        location=ticket_data.location,
+        category=ticket_data.category,
+        priority=ticket_data.priority,
         created_by=current_user.email,
     )
-    return ticket
+    return success_response(data=ticket, message="Tạo sự cố thành công")
 
 
 @router.put("/tickets/{ticket_id}/status", summary="Update ticket status")
 async def update_ticket_status(
     ticket_id: str,
-    status_data: dict,
+    status_data: TicketUpdateStatus,
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Update ticket status.
-    
-    Request body:
-    ```json
-    {
-        "status": "string"
-    }
-    ```
-    """
     if current_user.role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff and admin can update status")
 
     ticket = maintenance_service.update_ticket_status(
         ticket_id=ticket_id,
-        status=status_data.get("status"),
+        status=status_data.status,
         updated_by=current_user.email,
     )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
-    return ticket
+    return success_response(data=ticket, message="Cập nhật trạng thái thành công")
 
 
 @router.put("/tickets/{ticket_id}/assign", summary="Assign ticket to staff")
 async def assign_ticket(
     ticket_id: str,
-    assign_data: dict,
+    assign_data: TicketAssign,
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Assign a ticket to a staff member.
-    
-    Request body:
-    ```json
-    {
-        "assigned_to": "string"
-    }
-    ```
-    """
     if current_user.role not in ["staff", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff and admin can assign")
 
     ticket = maintenance_service.assign_ticket(
         ticket_id=ticket_id,
-        assigned_to=assign_data.get("assigned_to"),
+        assigned_to=assign_data.assigned_to,
     )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
-    return ticket
+    return success_response(data=ticket, message="Phân công xử lý thành công")
 
 
 @router.get("/schedule", summary="Get maintenance schedule")
@@ -155,18 +108,11 @@ async def get_schedule(
     limit: int = Query(20),
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Get scheduled maintenance events.
-    
-    - **start_date**: Filter start date (YYYY-MM-DD)
-    - **end_date**: Filter end date (YYYY-MM-DD)
-    - **limit**: Maximum number of events
-    """
     result = maintenance_service.list_schedule(start_date, end_date, limit)
-    return result
+    return success_response(data=result, message="Lấy lịch bảo trì thành công")
 
 
 @router.get("/statistics", summary="Get maintenance statistics")
 async def get_statistics(current_user: Principal = Depends(get_principal)):
-    """Get maintenance ticket statistics."""
-    return maintenance_service.get_statistics()
+    data = maintenance_service.get_statistics()
+    return success_response(data=data, message="Lấy thống kê bảo trì thành công")

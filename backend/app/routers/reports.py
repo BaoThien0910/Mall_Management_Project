@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query, Depends, HTTPException
 from typing import Optional
 from app.services import reports_service
 from app.dependencies import get_principal, Principal
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -14,18 +15,11 @@ async def get_revenue_report(
     end_month: Optional[str] = Query(None),
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Get revenue report.
-    
-    - **start_month**: Start month (YYYY-MM format)
-    - **end_month**: End month (YYYY-MM format)
-    
-    Required role: management or admin
-    """
-    if current_user.get("role") not in ["management", "admin"]:
+    if current_user.role not in ["management", "admin"]:
         raise HTTPException(status_code=403, detail="Only management and admin can view reports")
 
-    return reports_service.get_revenue_report(start_month, end_month)
+    data = reports_service.get_revenue_report(start_month, end_month)
+    return success_response(data=data, message="Lấy báo cáo doanh thu thành công")
 
 
 @router.get("/debt", summary="Get debt collection report")
@@ -34,45 +28,30 @@ async def get_debt_report(
     overdue_only: bool = Query(False),
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Get debt collection report.
-    
-    - **status**: Filter by status (overdue, paid, pending)
-    - **overdue_only**: Only include overdue items
-    
-    Required role: management or admin
-    """
     if current_user.role not in ["management", "admin", "staff"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    return reports_service.get_debt_report(status, overdue_only)
+    data = reports_service.get_debt_report(status, overdue_only)
+    return success_response(data=data, message="Lấy báo cáo công nợ thành công")
 
 
 @router.get("/occupancy", summary="Get occupancy report")
 async def get_occupancy_report(
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Get occupancy report with breakdown by floor and category.
-    
-    Required role: management or admin
-    """
     if current_user.role not in ["management", "admin"]:
         raise HTTPException(status_code=403, detail="Only management and admin can view reports")
 
-    return reports_service.get_occupancy_report()
+    data = reports_service.get_occupancy_report()
+    return success_response(data=data, message="Lấy báo cáo trạng thái mặt bằng thành công")
 
 
 @router.get("/kpi", summary="Get KPI dashboard")
 async def get_kpi_dashboard(
     current_user: Principal = Depends(get_principal),
 ):
-    """
-    Get KPI dashboard combining multiple metrics.
-    
-    Required role: management or admin
-    """
     if current_user.role not in ["management", "admin"]:
         raise HTTPException(status_code=403, detail="Only management and admin can view reports")
 
-    return reports_service.get_kpi_dashboard()
+    data = reports_service.get_kpi_dashboard()
+    return success_response(data=data, message="Lấy dữ liệu tổng quan KPI thành công")

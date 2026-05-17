@@ -2,11 +2,10 @@
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-
 from app.dependencies import Principal
 from app.models.congno import CongNo
+from app.models.hopdong import HopDong
 from app.schemas.congno import DebtDetailOut, DebtListEnvelope, DebtSummaryOut
-
 
 def list_debts(
     db: Session,
@@ -17,21 +16,20 @@ def list_debts(
     search: str | None = None,
     status_filter: str | None = None,
 ) -> DebtListEnvelope:
-    q = db.query(CongNo)
+    q = db.query(CongNo, HopDong).join(HopDong, CongNo.ma_hd == HopDong.ma_hd)
 
     if principal.role == "tenant":
         code = principal.ma_khach_dai_dien
         if not code:
             return DebtListEnvelope(items=[], total=0, skip=skip, limit=limit)
-        q = q.filter(CongNo.ma_khach == code)
+        q = q.filter(HopDong.ma_khach == code)
 
     if search:
         s = f"%{search.strip()}%"
         q = q.filter(
             or_(
-                CongNo.ma_congno.ilike(s),
-                CongNo.ten_khach_thue.ilike(s),
-                CongNo.ma_matbang.ilike(s),
+                CongNo.ma_congno.ilike(s),  # Đã sửa thành ma_congno
+                HopDong.ma_matbang.ilike(s),
             )
         )
 
@@ -39,30 +37,29 @@ def list_debts(
         q = q.filter(CongNo.trang_thai == status_filter)
 
     total = q.count()
-    rows = (
-        q.order_by(CongNo.ngay_den_han.desc()).offset(skip).limit(min(limit, 500)).all()
-    )
+    # Đã sửa thành han_thanh_toan
+    rows = q.order_by(CongNo.han_thanh_toan.desc()).offset(skip).limit(min(limit, 500)).all()
 
-    items = [DebtSummaryOut.from_congno(r) for r in rows]
+    items = [DebtSummaryOut.from_congno(cn, tenant_name=hd.ma_khach, premise_code=hd.ma_matbang) for cn, hd in rows]
 
     return DebtListEnvelope(items=items, total=total, skip=skip, limit=limit)
 
 
 def get_debt_detail(db: Session, ma: str, principal: Principal) -> DebtDetailOut | None:
-    row = db.get(CongNo, ma)
-    if not row:
+    # Đã sửa thành ma_congno
+    result = db.query(CongNo, HopDong).join(HopDong, CongNo.ma_hd == HopDong.ma_hd).filter(CongNo.ma_congno == ma).first()
+    if not result:
         return None
+    
+    cn, hd = result
 
     if principal.role == "tenant":
         code = principal.ma_khach_dai_dien or ""
-        if row.ma_khach != code:
+        if hd.ma_khach != code:
             return None
 
-    return DebtDetailOut.from_congno(row)
+    return DebtDetailOut.from_congno(cn, tenant_name=hd.ma_khach, premise_code=hd.ma_matbang)
 
 
 def simulate_calculate_cycle(db: Session) -> dict:
-    """stub tính công nợ — sau nối nghiệp vụ thực."""
-
-    _ = db
     return {"success": True, "message": "Đã xếp kỳ tính công nợ (mô phỏng)."}

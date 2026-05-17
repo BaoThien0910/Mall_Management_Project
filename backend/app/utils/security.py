@@ -1,6 +1,6 @@
 """Mật khẩu + JWT."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, date, timezone, timedelta
 from typing import Any
 
 import bcrypt
@@ -23,7 +23,7 @@ def verify_password(pw: str, hashed: str) -> bool:
 def create_access_token(data: dict[str, Any]) -> str:
     settings = get_settings()
     payload = dict(data)
-    expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload["exp"] = expire
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
