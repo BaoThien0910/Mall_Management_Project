@@ -76,17 +76,11 @@ export default function LoginPage() {
             <Text type="secondary" style={{ fontSize: '16px' }}>Hệ thống quản lý trung tâm thương mại</Text>
           </div>
 
-          <Form  // DELETE THIS AFTER TESTING
+          <Form  
             name="login_form" 
             layout="vertical" 
             onFinish={onFinish} 
             size="large"
-            // 🌟 AUTO-FILL MAGIC: Change 'a' to 't', 's', or 'b' to test other roles instantly!
-            initialValues={{
-              email: "a",
-              password: "1",
-              remember: true
-            }}
           >
             <Form.Item label={<Text strong>Email / Tài khoản</Text>} name="email" rules={[{ required: true, message: 'Vui lòng nhập email!' }]}>
               <Input prefix={<MailOutlined style={{ color: '#bfbfbf' }} />} placeholder="admin@mainplaza.com" />
