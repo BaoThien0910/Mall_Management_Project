@@ -22,452 +22,452 @@ GO
 BEGIN TRY
     BEGIN TRANSACTION;
 
-    /* ============================================================
-       1. Seed VAITRO
-       ============================================================ */
+--     /* ============================================================
+--        1. Seed VAITRO
+--        ============================================================ */
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO
-        WHERE MAVAITRO = 'QTV'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO (
-            MAVAITRO,
-            TENVAITRO,
-            MOTA,
-            TRANGTHAI
-        )
-        VALUES (
-            'QTV',
-            N'Quản trị viên',
-            N'Quản trị toàn bộ hệ thống',
-            N'Đang dùng'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO
+--         WHERE MAVAITRO = 'QTV'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO (
+--             MAVAITRO,
+--             TENVAITRO,
+--             MOTA,
+--             TRANGTHAI
+--         )
+--         VALUES (
+--             'QTV',
+--             N'Quản trị viên',
+--             N'Quản trị toàn bộ hệ thống',
+--             N'Đang dùng'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO
-        WHERE MAVAITRO = 'BQL'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO (
-            MAVAITRO,
-            TENVAITRO,
-            MOTA,
-            TRANGTHAI
-        )
-        VALUES (
-            'BQL',
-            N'Ban Quản Lý',
-            N'Vai trò quản lý nghiệp vụ tổng thể',
-            N'Đang dùng'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO
+--         WHERE MAVAITRO = 'BQL'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO (
+--             MAVAITRO,
+--             TENVAITRO,
+--             MOTA,
+--             TRANGTHAI
+--         )
+--         VALUES (
+--             'BQL',
+--             N'Ban Quản Lý',
+--             N'Vai trò quản lý nghiệp vụ tổng thể',
+--             N'Đang dùng'
+--         );
+--     END;
 
-    /* ============================================================
-       2. Seed QUYEN mẫu
-       Các action phải tuân theo CHECK:
-       Xem, Tạo, Sửa, Xóa, Duyệt, Thanh toán, Import
-       ============================================================ */
+--     /* ============================================================
+--        2. Seed QUYEN mẫu
+--        Các action phải tuân theo CHECK:
+--        Xem, Tạo, Sửa, Xóa, Duyệt, Thanh toán, Import
+--        ============================================================ */
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.QUYEN
-        WHERE MAQUYEN = 'RBAC_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.QUYEN (
-            MAQUYEN,
-            TENQUYEN,
-            MODULE,
-            HANHDONG,
-            MOTA
-        )
-        VALUES (
-            'RBAC_VIEW',
-            N'Xem danh sách vai trò và quyền',
-            'RBAC',
-            'Xem',
-            N'Dùng để xem dữ liệu phân quyền'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.QUYEN
+--         WHERE MAQUYEN = 'RBAC_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.QUYEN (
+--             MAQUYEN,
+--             TENQUYEN,
+--             MODULE,
+--             HANHDONG,
+--             MOTA
+--         )
+--         VALUES (
+--             'RBAC_VIEW',
+--             N'Xem danh sách vai trò và quyền',
+--             'RBAC',
+--             'Xem',
+--             N'Dùng để xem dữ liệu phân quyền'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.QUYEN
-        WHERE MAQUYEN = 'RBAC_EDIT'
-    )
-    BEGIN
-        INSERT INTO dbo.QUYEN (
-            MAQUYEN,
-            TENQUYEN,
-            MODULE,
-            HANHDONG,
-            MOTA
-        )
-        VALUES (
-            'RBAC_EDIT',
-            N'Cập nhật quyền của vai trò',
-            'RBAC',
-            'Sửa',
-            N'Dùng để gán lại danh sách quyền cho vai trò'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.QUYEN
+--         WHERE MAQUYEN = 'RBAC_EDIT'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.QUYEN (
+--             MAQUYEN,
+--             TENQUYEN,
+--             MODULE,
+--             HANHDONG,
+--             MOTA
+--         )
+--         VALUES (
+--             'RBAC_EDIT',
+--             N'Cập nhật quyền của vai trò',
+--             'RBAC',
+--             'Sửa',
+--             N'Dùng để gán lại danh sách quyền cho vai trò'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.QUYEN
-        WHERE MAQUYEN = 'ACCOUNT_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.QUYEN (
-            MAQUYEN,
-            TENQUYEN,
-            MODULE,
-            HANHDONG,
-            MOTA
-        )
-        VALUES (
-            'ACCOUNT_VIEW',
-            N'Xem danh sách tài khoản',
-            'TAIKHOAN',
-            'Xem',
-            N'Dùng để xem danh sách tài khoản'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.QUYEN
+--         WHERE MAQUYEN = 'ACCOUNT_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.QUYEN (
+--             MAQUYEN,
+--             TENQUYEN,
+--             MODULE,
+--             HANHDONG,
+--             MOTA
+--         )
+--         VALUES (
+--             'ACCOUNT_VIEW',
+--             N'Xem danh sách tài khoản',
+--             'TAIKHOAN',
+--             'Xem',
+--             N'Dùng để xem danh sách tài khoản'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.QUYEN
-        WHERE MAQUYEN = 'ACCOUNT_CREATE'
-    )
-    BEGIN
-        INSERT INTO dbo.QUYEN (
-            MAQUYEN,
-            TENQUYEN,
-            MODULE,
-            HANHDONG,
-            MOTA
-        )
-        VALUES (
-            'ACCOUNT_CREATE',
-            N'Tạo tài khoản',
-            'TAIKHOAN',
-            'Tạo',
-            N'Dùng để tạo tài khoản mới'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.QUYEN
+--         WHERE MAQUYEN = 'ACCOUNT_CREATE'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.QUYEN (
+--             MAQUYEN,
+--             TENQUYEN,
+--             MODULE,
+--             HANHDONG,
+--             MOTA
+--         )
+--         VALUES (
+--             'ACCOUNT_CREATE',
+--             N'Tạo tài khoản',
+--             'TAIKHOAN',
+--             'Tạo',
+--             N'Dùng để tạo tài khoản mới'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.QUYEN
-        WHERE MAQUYEN = 'PREMISE_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.QUYEN (
-            MAQUYEN,
-            TENQUYEN,
-            MODULE,
-            HANHDONG,
-            MOTA
-        )
-        VALUES (
-            'PREMISE_VIEW',
-            N'Xem mặt bằng',
-            'MATBANG',
-            'Xem',
-            N'Dùng để xem danh sách và chi tiết mặt bằng'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.QUYEN
+--         WHERE MAQUYEN = 'PREMISE_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.QUYEN (
+--             MAQUYEN,
+--             TENQUYEN,
+--             MODULE,
+--             HANHDONG,
+--             MOTA
+--         )
+--         VALUES (
+--             'PREMISE_VIEW',
+--             N'Xem mặt bằng',
+--             'MATBANG',
+--             'Xem',
+--             N'Dùng để xem danh sách và chi tiết mặt bằng'
+--         );
+--     END;
 
-    /* ============================================================
-       3. Seed VAITRO_QUYEN
-       QTV có toàn bộ quyền mẫu
-       BQL chỉ có quyền xem mặt bằng để tạo khác biệt khi test
-       ============================================================ */
+--     /* ============================================================
+--        3. Seed VAITRO_QUYEN
+--        QTV có toàn bộ quyền mẫu
+--        BQL chỉ có quyền xem mặt bằng để tạo khác biệt khi test
+--        ============================================================ */
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO_QUYEN
-        WHERE MAVAITRO = 'QTV'
-          AND MAQUYEN = 'RBAC_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO_QUYEN (
-            MAVAITRO,
-            MAQUYEN
-        )
-        VALUES (
-            'QTV',
-            'RBAC_VIEW'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO_QUYEN
+--         WHERE MAVAITRO = 'QTV'
+--           AND MAQUYEN = 'RBAC_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO_QUYEN (
+--             MAVAITRO,
+--             MAQUYEN
+--         )
+--         VALUES (
+--             'QTV',
+--             'RBAC_VIEW'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO_QUYEN
-        WHERE MAVAITRO = 'QTV'
-          AND MAQUYEN = 'RBAC_EDIT'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO_QUYEN (
-            MAVAITRO,
-            MAQUYEN
-        )
-        VALUES (
-            'QTV',
-            'RBAC_EDIT'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO_QUYEN
+--         WHERE MAVAITRO = 'QTV'
+--           AND MAQUYEN = 'RBAC_EDIT'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO_QUYEN (
+--             MAVAITRO,
+--             MAQUYEN
+--         )
+--         VALUES (
+--             'QTV',
+--             'RBAC_EDIT'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO_QUYEN
-        WHERE MAVAITRO = 'QTV'
-          AND MAQUYEN = 'ACCOUNT_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO_QUYEN (
-            MAVAITRO,
-            MAQUYEN
-        )
-        VALUES (
-            'QTV',
-            'ACCOUNT_VIEW'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO_QUYEN
+--         WHERE MAVAITRO = 'QTV'
+--           AND MAQUYEN = 'ACCOUNT_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO_QUYEN (
+--             MAVAITRO,
+--             MAQUYEN
+--         )
+--         VALUES (
+--             'QTV',
+--             'ACCOUNT_VIEW'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO_QUYEN
-        WHERE MAVAITRO = 'QTV'
-          AND MAQUYEN = 'ACCOUNT_CREATE'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO_QUYEN (
-            MAVAITRO,
-            MAQUYEN
-        )
-        VALUES (
-            'QTV',
-            'ACCOUNT_CREATE'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO_QUYEN
+--         WHERE MAVAITRO = 'QTV'
+--           AND MAQUYEN = 'ACCOUNT_CREATE'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO_QUYEN (
+--             MAVAITRO,
+--             MAQUYEN
+--         )
+--         VALUES (
+--             'QTV',
+--             'ACCOUNT_CREATE'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO_QUYEN
-        WHERE MAVAITRO = 'QTV'
-          AND MAQUYEN = 'PREMISE_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO_QUYEN (
-            MAVAITRO,
-            MAQUYEN
-        )
-        VALUES (
-            'QTV',
-            'PREMISE_VIEW'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO_QUYEN
+--         WHERE MAVAITRO = 'QTV'
+--           AND MAQUYEN = 'PREMISE_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO_QUYEN (
+--             MAVAITRO,
+--             MAQUYEN
+--         )
+--         VALUES (
+--             'QTV',
+--             'PREMISE_VIEW'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.VAITRO_QUYEN
-        WHERE MAVAITRO = 'BQL'
-          AND MAQUYEN = 'PREMISE_VIEW'
-    )
-    BEGIN
-        INSERT INTO dbo.VAITRO_QUYEN (
-            MAVAITRO,
-            MAQUYEN
-        )
-        VALUES (
-            'BQL',
-            'PREMISE_VIEW'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.VAITRO_QUYEN
+--         WHERE MAVAITRO = 'BQL'
+--           AND MAQUYEN = 'PREMISE_VIEW'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.VAITRO_QUYEN (
+--             MAVAITRO,
+--             MAQUYEN
+--         )
+--         VALUES (
+--             'BQL',
+--             'PREMISE_VIEW'
+--         );
+--     END;
 
-    /* ============================================================
-       4. Seed NHANVIEN
-       ============================================================ */
+--     /* ============================================================
+--        4. Seed NHANVIEN
+--        ============================================================ */
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.NHANVIEN
-        WHERE MANV = 'NV_QTV_001'
-    )
-    BEGIN
-        INSERT INTO dbo.NHANVIEN (
-            MANV,
-            HOTEN,
-            PHONGBAN,
-            CHUCVU,
-            SDT,
-            EMAIL,
-            TRANGTHAI
-        )
-        VALUES (
-            'NV_QTV_001',
-            N'Quản trị viên Seed',
-            N'Quản trị hệ thống',
-            N'Quản trị viên',
-            '0900000001',
-            'qtv.seed@example.local',
-            N'Đang làm'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.NHANVIEN
+--         WHERE MANV = 'NV_QTV_001'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.NHANVIEN (
+--             MANV,
+--             HOTEN,
+--             PHONGBAN,
+--             CHUCVU,
+--             SDT,
+--             EMAIL,
+--             TRANGTHAI
+--         )
+--         VALUES (
+--             'NV_QTV_001',
+--             N'Quản trị viên Seed',
+--             N'Quản trị hệ thống',
+--             N'Quản trị viên',
+--             '0900000001',
+--             'qtv.seed@example.local',
+--             N'Đang làm'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.NHANVIEN
-        WHERE MANV = 'NV_BQL_001'
-    )
-    BEGIN
-        INSERT INTO dbo.NHANVIEN (
-            MANV,
-            HOTEN,
-            PHONGBAN,
-            CHUCVU,
-            SDT,
-            EMAIL,
-            TRANGTHAI
-        )
-        VALUES (
-            'NV_BQL_001',
-            N'Ban Quản Lý Seed',
-            N'Ban Quản Lý',
-            N'Ban Quản Lý',
-            '0900000002',
-            'bql.seed@example.local',
-            N'Đang làm'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.NHANVIEN
+--         WHERE MANV = 'NV_BQL_001'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.NHANVIEN (
+--             MANV,
+--             HOTEN,
+--             PHONGBAN,
+--             CHUCVU,
+--             SDT,
+--             EMAIL,
+--             TRANGTHAI
+--         )
+--         VALUES (
+--             'NV_BQL_001',
+--             N'Ban Quản Lý Seed',
+--             N'Ban Quản Lý',
+--             N'Ban Quản Lý',
+--             '0900000002',
+--             'bql.seed@example.local',
+--             N'Đang làm'
+--         );
+--     END;
 
-    /* ============================================================
-       5. Seed TAIKHOAN
-       Hash bcrypt dưới đây dùng cho password: admin1234
-       ============================================================ */
+--     /* ============================================================
+--        5. Seed TAIKHOAN
+--        Hash bcrypt dưới đây dùng cho password: admin1234
+--        ============================================================ */
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.TAIKHOAN
-        WHERE MATK = 'TK_QTV_001'
-           OR TENDANGNHAP = 'qtv_admin'
-    )
-    BEGIN
-        INSERT INTO dbo.TAIKHOAN (
-            MATK,
-            TENDANGNHAP,
-            MATKHAU,
-            TRANGTHAI,
-            BATBUOC_DOIMK,
-            SOLAN_DANGNHAPSAI,
-            KHOA_DEN,
-            MANV,
-            MAKH,
-            MAVAITRO
-        )
-        VALUES (
-            'TK_QTV_001',
-            'qtv_admin',
-            '$2b$10$QkGQL1L00nBebiuIXlCYFOOBUVkTt/Z96.mHLWGAUDvNXsM1AxNbS',
-            N'Hoạt động',
-            0,
-            0,
-            NULL,
-            'NV_QTV_001',
-            NULL,
-            'QTV'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.TAIKHOAN
+--         WHERE MATK = 'TK_QTV_001'
+--            OR TENDANGNHAP = 'qtv_admin'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.TAIKHOAN (
+--             MATK,
+--             TENDANGNHAP,
+--             MATKHAU,
+--             TRANGTHAI,
+--             BATBUOC_DOIMK,
+--             SOLAN_DANGNHAPSAI,
+--             KHOA_DEN,
+--             MANV,
+--             MAKH,
+--             MAVAITRO
+--         )
+--         VALUES (
+--             'TK_QTV_001',
+--             'qtv_admin',
+--             '$2b$10$QkGQL1L00nBebiuIXlCYFOOBUVkTt/Z96.mHLWGAUDvNXsM1AxNbS',
+--             N'Hoạt động',
+--             0,
+--             0,
+--             NULL,
+--             'NV_QTV_001',
+--             NULL,
+--             'QTV'
+--         );
+--     END;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.TAIKHOAN
-        WHERE MATK = 'TK_BQL_001'
-           OR TENDANGNHAP = 'bql_manager'
-    )
-    BEGIN
-        INSERT INTO dbo.TAIKHOAN (
-            MATK,
-            TENDANGNHAP,
-            MATKHAU,
-            TRANGTHAI,
-            BATBUOC_DOIMK,
-            SOLAN_DANGNHAPSAI,
-            KHOA_DEN,
-            MANV,
-            MAKH,
-            MAVAITRO
-        )
-        VALUES (
-            'TK_BQL_001',
-            'bql_manager',
-            '$2b$10$QkGQL1L00nBebiuIXlCYFOOBUVkTt/Z96.mHLWGAUDvNXsM1AxNbS',
-            N'Hoạt động',
-            0,
-            0,
-            NULL,
-            'NV_BQL_001',
-            NULL,
-            'BQL'
-        );
-    END;
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM dbo.TAIKHOAN
+--         WHERE MATK = 'TK_BQL_001'
+--            OR TENDANGNHAP = 'bql_manager'
+--     )
+--     BEGIN
+--         INSERT INTO dbo.TAIKHOAN (
+--             MATK,
+--             TENDANGNHAP,
+--             MATKHAU,
+--             TRANGTHAI,
+--             BATBUOC_DOIMK,
+--             SOLAN_DANGNHAPSAI,
+--             KHOA_DEN,
+--             MANV,
+--             MAKH,
+--             MAVAITRO
+--         )
+--         VALUES (
+--             'TK_BQL_001',
+--             'bql_manager',
+--             '$2b$10$QkGQL1L00nBebiuIXlCYFOOBUVkTt/Z96.mHLWGAUDvNXsM1AxNbS',
+--             N'Hoạt động',
+--             0,
+--             0,
+--             NULL,
+--             'NV_BQL_001',
+--             NULL,
+--             'BQL'
+--         );
+--     END;
 
-    COMMIT TRANSACTION;
-END TRY
-BEGIN CATCH
-    IF @@TRANCOUNT > 0
-        ROLLBACK TRANSACTION;
+--     COMMIT TRANSACTION;
+-- END TRY
+-- BEGIN CATCH
+--     IF @@TRANCOUNT > 0
+--         ROLLBACK TRANSACTION;
 
-    THROW;
-END CATCH;
-GO
+--     THROW;
+-- END CATCH;
+-- GO
 
-/* ============================================================
-   6. Query kiểm tra nhanh sau khi seed
-   ============================================================ */
+-- /* ============================================================
+--    6. Query kiểm tra nhanh sau khi seed
+--    ============================================================ */
 
-SELECT
-    MAVAITRO,
-    TENVAITRO,
-    TRANGTHAI
-FROM dbo.VAITRO
-WHERE MAVAITRO IN ('QTV', 'BQL');
+-- SELECT
+--     MAVAITRO,
+--     TENVAITRO,
+--     TRANGTHAI
+-- FROM dbo.VAITRO
+-- WHERE MAVAITRO IN ('QTV', 'BQL');
 
-SELECT
-    MAQUYEN,
-    TENQUYEN,
-    MODULE,
-    HANHDONG
-FROM dbo.QUYEN
-WHERE MAQUYEN IN (
-    'RBAC_VIEW',
-    'RBAC_EDIT',
-    'ACCOUNT_VIEW',
-    'ACCOUNT_CREATE',
-    'PREMISE_VIEW'
-);
+-- SELECT
+--     MAQUYEN,
+--     TENQUYEN,
+--     MODULE,
+--     HANHDONG
+-- FROM dbo.QUYEN
+-- WHERE MAQUYEN IN (
+--     'RBAC_VIEW',
+--     'RBAC_EDIT',
+--     'ACCOUNT_VIEW',
+--     'ACCOUNT_CREATE',
+--     'PREMISE_VIEW'
+-- );
 
-SELECT
-    VTQ.MAVAITRO,
-    VTQ.MAQUYEN
-FROM dbo.VAITRO_QUYEN AS VTQ
-WHERE VTQ.MAVAITRO IN ('QTV', 'BQL')
-ORDER BY VTQ.MAVAITRO, VTQ.MAQUYEN;
+-- SELECT
+--     VTQ.MAVAITRO,
+--     VTQ.MAQUYEN
+-- FROM dbo.VAITRO_QUYEN AS VTQ
+-- WHERE VTQ.MAVAITRO IN ('QTV', 'BQL')
+-- ORDER BY VTQ.MAVAITRO, VTQ.MAQUYEN;
 
-SELECT
-    MATK,
-    TENDANGNHAP,
-    TRANGTHAI,
-    MANV,
-    MAVAITRO
-FROM dbo.TAIKHOAN
-WHERE MATK IN ('TK_QTV_001', 'TK_BQL_001');
-GO
+-- SELECT
+--     MATK,
+--     TENDANGNHAP,
+--     TRANGTHAI,
+--     MANV,
+--     MAVAITRO
+-- FROM dbo.TAIKHOAN
+-- WHERE MATK IN ('TK_QTV_001', 'TK_BQL_001');
+-- GO
 -- =========================
 -- 1. Seed vai trò
 -- =========================
@@ -530,7 +530,7 @@ VALUES
     0,
     0,
     NULL,
-    'NV_QTV_002',
+    'NV_QTV_001',
     NULL,
     'QTV',
     GETDATE()
