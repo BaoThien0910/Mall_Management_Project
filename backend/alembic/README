@@ -1,0 +1,36 @@
+# File: alembic/README
+
+# Alembic Migration
+
+Folder này chứa cấu hình migration cơ sở dữ liệu cho backend Quản lý Trung tâm Thương mại.
+
+## Vai trò
+
+Alembic dùng để:
+- Theo dõi thay đổi schema cơ sở dữ liệu.
+- Sinh migration từ SQLAlchemy models.
+- Nâng cấp hoặc rollback database theo từng revision.
+
+## Tạo revision mới
+
+```bash
+alembic revision --autogenerate -m "create initial tables"
+```
+
+## Chạy migration
+
+```bash
+alembic upgrade head
+```
+
+## Rollback một revision
+
+```bash
+alembic downgrade -1
+```
+
+## Lưu ý quan trọng
+
+- Phải đảm bảo `app/models/__init__.py` đã import đầy đủ toàn bộ models.
+- Luôn kiểm tra kỹ file migration tự sinh trước khi chạy.
+- Không chạy migration trực tiếp trên database production nếu chưa sao lưu.

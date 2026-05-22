@@ -1,91 +1,90 @@
-from dataclasses import dataclass
+# File: app/dependencies.py
+from typing import Any, Callable, List, Optional
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
+from app.constants.roles import RoleCode
 from app.database import get_db
+from app.exceptions.business_exceptions import (
+    ForbiddenException,
+    UnauthorizedException,
+)
 from app.models.taikhoan import TaiKhoan
-from app.services.rbac_service import permissions_for_role
-from app.utils.security import decode_token
-
-bearer_scheme = HTTPBearer(auto_error=True)
+from app.utils.security import decode_access_token
 
 
-@dataclass
-class Principal:
-    email: str
-    role: str
-    permissions: list[str]
-    ma_khach_dai_dien: str | None
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_PREFIX}/auth/dang-nhap",
+    auto_error=False,
+)
 
 
-def has_permission(p: Principal, code: str) -> bool:
-    return "*" in p.permissions or code in p.permissions
+def _normalize_role_value(role: Any) -> str:
+    """Chuẩn hóa RoleCode enum hoặc chuỗi thường về cùng dạng string."""
+    return role.value if hasattr(role, "value") else str(role)
 
 
-def get_principal(
-    creds: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+def _get_account_identifier_column() -> Any:
+    """Lấy cột mã tài khoản phù hợp với biến thể tên model hiện có."""
+    if hasattr(TaiKhoan, "ma_tai_khoan"):
+        return getattr(TaiKhoan, "ma_tai_khoan")
+    return getattr(TaiKhoan, "ma_tk")
+
+
+def _get_account_status_value(account: TaiKhoan) -> Any:
+    """Lấy trạng thái tài khoản theo tên thuộc tính model hiện có."""
+    return getattr(account, "trang_thai", None)
+
+
+def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
-) -> Principal:
-    raw = creds.credentials
-    if not raw:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Thiếu token.",
-        )
+) -> TaiKhoan:
+    """Giải mã JWT, xác thực tài khoản và trả về người dùng hiện tại."""
+    if token is None or not token.strip():
+        raise UnauthorizedException("Thiếu access token")
 
-    try:
-        payload = decode_token(raw)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
+    payload = decode_access_token(token)
+    ma_tk = payload.get("ma_tk") or payload.get("sub")
 
-    email_from_token = str(payload.get("sub", "")).strip().lower()
+    if not ma_tk:
+        raise UnauthorizedException("Token không chứa thông tin tài khoản")
 
-    tk = db.query(TaiKhoan).filter(TaiKhoan.email_dang_nhap == email_from_token).first()
-    if not tk:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tài khoản không tồn tại.")
+    account_identifier_column = _get_account_identifier_column()
+    stmt = select(TaiKhoan).where(account_identifier_column == ma_tk)
+    tai_khoan = db.execute(stmt).scalars().first()
 
-    return Principal(
-        email=tk.email_dang_nhap,
-        role=tk.vai_tro_ma,
-        permissions=permissions_for_role(tk.vai_tro_ma),
-        ma_khach_dai_dien=tk.ma_khach_dai_dien,
-    )
+    if tai_khoan is None:
+        raise UnauthorizedException("Tài khoản không tồn tại")
+
+    if _get_account_status_value(tai_khoan) != "Hoạt động":
+        raise ForbiddenException("Tài khoản đã bị vô hiệu hóa")
+
+    return tai_khoan
 
 
-def require_permissions(*codes: str):
-    def checker(p: Principal = Depends(get_principal)) -> Principal:
-        for c in codes:
-            if not has_permission(p, c):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Không đủ quyền thực hiện.",
-                )
-        return p
+def require_roles(
+    allowed_roles: List[RoleCode],
+) -> Callable[..., TaiKhoan]:
+    """Tạo dependency kiểm tra role hiện tại có thuộc nhóm được phép hay không."""
 
-    return checker
+    allowed_role_values = {
+        _normalize_role_value(role)
+        for role in allowed_roles
+    }
 
+    def _role_checker(
+        current_user: TaiKhoan = Depends(get_current_user),
+    ) -> TaiKhoan:
+        current_role = _normalize_role_value(current_user.ma_vai_tro)
 
-def require_any_permission(*codes: str):
-    def checker(p: Principal = Depends(get_principal)) -> Principal:
-        if not any(has_permission(p, c) for c in codes):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Không đủ quyền thực hiện.",
-            )
-        return p
+        if current_role not in allowed_role_values:
+            raise ForbiddenException("Bạn không có quyền truy cập chức năng này")
 
-    return checker
+        return current_user
 
-
-def require_roles(*roles: str):
-    def checker(p: Principal = Depends(get_principal)) -> Principal:
-        if p.role not in roles and p.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Vai trò không được phép.",
-            )
-        return p
-
-    return checker
+    return _role_checker

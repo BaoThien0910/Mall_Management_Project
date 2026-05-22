@@ -1,27 +1,35 @@
-from collections.abc import Generator
+# File: app/database.py
+from typing import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from app.config import get_settings
+from app.config import settings
 
-settings = get_settings()
 
-connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+class Base(DeclarativeBase):
+    """Base metadata chung cho toàn bộ SQLAlchemy ORM models."""
+
+    pass
+
 
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args=connect_args,
-    echo=False,
+    echo=settings.SQLALCHEMY_ECHO,
+    pool_pre_ping=True,
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+    expire_on_commit=False,
+)
 
 
 def get_db() -> Generator[Session, None, None]:
+    """Cung cấp SQLAlchemy Session cho dependency injection của FastAPI."""
     db = SessionLocal()
     try:
         yield db

@@ -1,70 +1,92 @@
-from datetime import date
-from typing import Any
+# File: app/schemas/congno.py
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.models.congno import CongNo
+from app.constants.statuses import CongNoStatus
+from app.utils.validators import validate_month, validate_year
 
 
-class DebtSummaryOut(BaseModel):
-    id: str
-    tenant: str
-    premise: str
-    period: str
-    dueDate: date
-    totalAmount: int
-    paidAmount: int
-    status: str
+class TinhCongNoThangRequest(BaseModel):
+    thang: int
+    nam: int
 
+    @field_validator("thang")
     @classmethod
-    def from_congno(cls, c: CongNo) -> "DebtSummaryOut":
-        return cls(
-            id=c.ma_congno,
-            tenant=c.ten_khach_thue,
-            premise=c.ma_matbang,
-            period=c.ky_thanh_toan,
-            dueDate=c.ngay_den_han,
-            totalAmount=c.tong_phat_sinh,
-            paidAmount=c.da_thanh_toan,
-            status=c.trang_thai,
-        )
+    def validate_month_value(cls, value: int) -> int:
+        if not validate_month(value):
+            raise ValueError("Tháng phải nằm trong khoảng 1 đến 12.")
+        return value
 
-
-class DebtDetailOut(BaseModel):
-    id: str
-    tenant: str
-    premise: str
-    period: str
-    dueDate: date
-    status: str
-    lines: list[dict[str, Any]]
-    totalAmount: int
-    paidAmount: int
-    note: str | None = None
-
+    @field_validator("nam")
     @classmethod
-    def from_congno(cls, c: CongNo) -> "DebtDetailOut":
-        return cls(
-            id=c.ma_congno,
-            tenant=c.ten_khach_thue,
-            premise=c.ma_matbang,
-            period=c.ky_thanh_toan,
-            dueDate=c.ngay_den_han,
-            status=c.trang_thai,
-            lines=c.chi_tiet_dong_list(),
-            totalAmount=c.tong_phat_sinh,
-            paidAmount=c.da_thanh_toan,
-            note=c.ghi_chu,
-        )
+    def validate_year_value(cls, value: int) -> int:
+        if not validate_year(value):
+            raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
+        return value
 
 
-class DebtCalculateOut(BaseModel):
-    success: bool = True
-    message: str = "Đã tính toán công nợ"
+class CongNoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    ma_cong_no: str
+    ma_hop_dong: str
+    thang: int
+    nam: int
+    tien_thue: Decimal
+    tien_dien: Decimal
+    tien_nuoc: Decimal
+    phi_bao_tri: Decimal
+    tien_hoan: Decimal
+    tong_tien: Decimal
+    han_thanh_toan: Optional[date] = None
+    trang_thai: CongNoStatus
+    ngay_lap: datetime
 
 
-class DebtListEnvelope(BaseModel):
-    items: list[DebtSummaryOut]
-    total: int
-    skip: int
-    limit: int
+class CongNoFilter(BaseModel):
+    ma_hop_dong: Optional[str] = Field(default=None, max_length=20)
+    thang: Optional[int] = None
+    nam: Optional[int] = None
+    trang_thai: Optional[CongNoStatus] = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=10, ge=1, le=100)
+
+    @field_validator("thang")
+    @classmethod
+    def validate_optional_month(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and not validate_month(value):
+            raise ValueError("Tháng phải nằm trong khoảng 1 đến 12.")
+        return value
+
+    @field_validator("nam")
+    @classmethod
+    def validate_optional_year(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and not validate_year(value):
+            raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
+        return value
+
+
+class CongNoCuaToiFilter(BaseModel):
+    ma_hop_dong: Optional[str] = Field(default=None, max_length=20)
+    thang: Optional[int] = None
+    nam: Optional[int] = None
+    trang_thai: Optional[CongNoStatus] = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=10, ge=1, le=100)
+
+    @field_validator("thang")
+    @classmethod
+    def validate_optional_month(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and not validate_month(value):
+            raise ValueError("Tháng phải nằm trong khoảng 1 đến 12.")
+        return value
+
+    @field_validator("nam")
+    @classmethod
+    def validate_optional_year(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and not validate_year(value):
+            raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
+        return value
