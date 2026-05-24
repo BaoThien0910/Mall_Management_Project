@@ -28,6 +28,7 @@ from app.routers import (
     baocaobaotri,
     thongbao,
     nhatky,
+    dashboard,
 )
 
 
@@ -70,7 +71,7 @@ app.include_router(lichbt.router, prefix=settings.API_V1_PREFIX)
 app.include_router(baocaobaotri.router, prefix=settings.API_V1_PREFIX)
 app.include_router(thongbao.router, prefix=settings.API_V1_PREFIX)
 app.include_router(nhatky.router, prefix=settings.API_V1_PREFIX)
-
+app.include_router(dashboard.router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/")
 def root() -> Dict[str, str]:
