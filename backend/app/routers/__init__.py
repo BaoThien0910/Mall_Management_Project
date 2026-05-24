@@ -4,6 +4,7 @@ from . import baocaobaotri
 from . import baocaotaichinh
 from . import chisodiennuoc
 from . import congno
+from . import dashboard
 from . import hopdong
 from . import import_taichinh
 from . import lichbt
@@ -33,4 +34,5 @@ __all__ = [
     "baocaobaotri",
     "thongbao",
     "nhatky",
+    "dashboard",
 ]
