@@ -1,18 +1,19 @@
-import { StrictMode } from 'react';
-import { Provider } from 'react-redux';
-import { createRoot } from 'react-dom/client';
-import { ConfigProvider } from 'antd';
-import viVN from 'antd/locale/vi_VN';
-import './index.css';
-import App from './App.jsx';
-import { store } from './store';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Provider } from "react-redux";
+import { ConfigProvider } from "antd";
+import viVN from "antd/locale/vi_VN";
+import App from "./App.jsx";
+import { store } from "./store";
+import "antd/dist/reset.css";
+import "./styles/global.css";
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
     <Provider store={store}>
-      <ConfigProvider locale={viVN}>
+      <ConfigProvider locale={viVN} theme={{ token: { colorPrimary: "#1677ff", borderRadius: 8 } }}>
         <App />
       </ConfigProvider>
     </Provider>
-  </StrictMode>
+  </React.StrictMode>
 );
