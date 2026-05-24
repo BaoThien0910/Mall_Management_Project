@@ -1,42 +1,63 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { authService } from "../services/authService";
+import { clearAccessToken, getAccessToken, setAccessToken } from "../utils/storage";
 
-function sessionAuth() {
-  return {
-    token: sessionStorage.getItem('token'),
-    role: sessionStorage.getItem('role'),
-    email: sessionStorage.getItem('email'),
-  };
-}
+export const login = createAsyncThunk("auth/login", async (payload) => {
+  const tokenData = await authService.login(payload);
+  const token = tokenData?.access_token || tokenData?.token || tokenData?.accessToken;
+  setAccessToken(token);
+  const user = await authService.getCurrentUser();
+  return { token, user };
+});
 
-const initialState = sessionAuth();
+export const bootstrapAuth = createAsyncThunk("auth/bootstrap", async (_, { rejectWithValue }) => {
+  const token = getAccessToken();
+  if (!token) return rejectWithValue("NO_TOKEN");
+  const user = await authService.getCurrentUser();
+  return { token, user };
+});
 
 const authSlice = createSlice({
-  name: 'auth',
-  initialState,
+  name: "auth",
+  initialState: {
+    token: getAccessToken(),
+    user: null,
+    loading: false,
+    bootstrapped: false,
+  },
   reducers: {
-    setCredentials(state, action) {
-      const { token, role, email } = action.payload;
-      state.token = token;
-      state.role = role ?? null;
-      state.email = email ?? null;
-      if (token) sessionStorage.setItem('token', token);
-      else sessionStorage.removeItem('token');
-      if (role != null) sessionStorage.setItem('role', role);
-      else sessionStorage.removeItem('role');
-      if (email) sessionStorage.setItem('email', email);
-      else sessionStorage.removeItem('email');
-    },
-    logout(state) {
+    logoutLocal(state) {
       state.token = null;
-      state.role = null;
-      state.email = null;
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('role');
-      sessionStorage.removeItem('email');
-      sessionStorage.removeItem('permissions');
+      state.user = null;
+      clearAccessToken();
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(login.pending, (state) => { state.loading = true; })
+      .addCase(login.fulfilled, (state, action) => {
+        state.loading = false;
+        state.token = action.payload.token;
+        state.user = action.payload.user;
+        state.bootstrapped = true;
+      })
+      .addCase(login.rejected, (state) => { state.loading = false; })
+      .addCase(bootstrapAuth.pending, (state) => { state.loading = true; })
+      .addCase(bootstrapAuth.fulfilled, (state, action) => {
+        state.loading = false;
+        state.bootstrapped = true;
+        state.token = action.payload.token;
+        state.user = action.payload.user;
+      })
+      .addCase(bootstrapAuth.rejected, (state) => {
+        state.loading = false;
+        state.bootstrapped = true;
+        state.token = null;
+        state.user = null;
+        clearAccessToken();
+      });
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { logoutLocal } = authSlice.actions;
 export default authSlice.reducer;
