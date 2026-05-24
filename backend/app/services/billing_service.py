@@ -1,222 +1,314 @@
 # File: app/services/billing_service.py
-import uuid
 from collections import defaultdict
+from datetime import date
 from decimal import Decimal
 from typing import Any, DefaultDict, Dict, List, Optional
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.constants.statuses import AuditAction, CongNoStatus, DuLieuImportTaiChinhStatus, LoaiKhoanTaiChinh
-from app.exceptions.business_exceptions import BadRequestException, ForbiddenException
-from app.models import CongNo, DuLieuImportTaiChinh, HopDong
-from app.schemas.congno import CongNoCuaToiFilter, CongNoFilter, TinhCongNoThangRequest
-from app.services.audit_service import write_audit_log
-from app.utils.datetime_helper import current_datetime
-from app.utils.pagination import calculate_offset, calculate_total_pages, normalize_pagination
-from app.utils.transaction import transaction_context
+from app.exceptions.business_exceptions import BadRequestException
+from app.models.chisodiennuoc import ChiSoDienNuoc
+from app.models.congno import CongNo
+from app.models.dulieu_import_taichinh import DuLieuImportTaiChinh
+from app.models.hopdong import HopDong
+from app.services._common import generate_code, get_column, get_value
 
 
-def _generate_code(prefix: str) -> str:
-    return f"{prefix}_{uuid.uuid4().hex[:12].upper()}"
+def _to_decimal(value: Any) -> Decimal:
+    return Decimal(str(value or 0))
 
 
-def _enum_value(value: Any) -> Any:
-    return value.value if hasattr(value, "value") else value
+def _current_customer_id(current_user: Any) -> Optional[str]:
+    return get_value(current_user, ["ma_kh", "ma_khach_thue", "makh"])
 
 
-def _user_attr(current_user: Any, short_name: str, long_name: str) -> Any:
-    value = getattr(current_user, short_name, None)
-    return value if value is not None else getattr(current_user, long_name, None)
+def _serialize_debt(item: CongNo) -> Dict[str, Any]:
+    return {
+        "ma_cong_no": get_value(item, ["ma_cong_no", "ma_cn"], ""),
+        "ma_hop_dong": get_value(item, ["ma_hop_dong", "ma_hd"], ""),
+        "thang": item.thang,
+        "nam": item.nam,
+        "tien_thue": item.tien_thue,
+        "tien_dien": item.tien_dien,
+        "tien_nuoc": item.tien_nuoc,
+        "phi_bao_tri": item.phi_bao_tri,
+        "tien_hoan": item.tien_hoan,
+        "tong_tien": item.tong_tien,
+        "han_thanh_toan": get_value(item, ["han_thanh_toan"], None),
+        "trang_thai": item.trang_thai,
+        "ngay_lap": item.ngay_lap,
+    }
 
 
 def calculate_monthly_debts(
     db: Session,
-    payload: TinhCongNoThangRequest,
+    payload: Any,
     current_user: Any,
 ) -> Dict[str, Any]:
-    """Tính công nợ tháng từ dữ liệu import tài chính hợp lệ."""
+    """Tính công nợ tháng từ dữ liệu import tài chính và chỉ số điện nước.
+
+    Nguồn tiền:
+    - Tiền thuê, phí bảo trì, hoàn trả: DULIEU_IMPORT_TAICHINH theo MAHD.
+    - Tiền điện, tiền nước: CHISODIENNUOC theo MAMB của hợp đồng.
+    """
+    thang = get_value(payload, ["thang"])
+    nam = get_value(payload, ["nam"])
+    han_thanh_toan = get_value(payload, ["han_thanh_toan"], None)
+
+    if thang < 1 or thang > 12:
+        raise BadRequestException("Tháng phải nằm trong khoảng 1 đến 12")
+
     import_rows = db.execute(
         select(DuLieuImportTaiChinh).where(
-            DuLieuImportTaiChinh.thang == payload.thang,
-            DuLieuImportTaiChinh.nam == payload.nam,
-            DuLieuImportTaiChinh.trang_thai == DuLieuImportTaiChinhStatus.HOP_LE.value,
+            DuLieuImportTaiChinh.thang == thang,
+            DuLieuImportTaiChinh.nam == nam,
+            DuLieuImportTaiChinh.trang_thai == "Hợp lệ",
         )
     ).scalars().all()
 
     grouped: DefaultDict[str, List[DuLieuImportTaiChinh]] = defaultdict(list)
     for row in import_rows:
-        grouped[row.ma_hop_dong].append(row)
+        ma_hd = get_value(row, ["ma_hop_dong", "ma_hd"])
+        if ma_hd:
+            grouped[ma_hd].append(row)
 
-    created_codes: List[str] = []
-    skipped_contracts: List[str] = []
-    debts_to_add: List[CongNo] = []
-    rows_to_mark_used: List[DuLieuImportTaiChinh] = []
-
-    for ma_hop_dong, rows in grouped.items():
-        existing_debt = db.execute(
-            select(CongNo).where(
-                CongNo.ma_hop_dong == ma_hop_dong,
-                CongNo.thang == payload.thang,
-                CongNo.nam == payload.nam,
-            )
-        ).scalars().first()
-        if existing_debt is not None:
-            skipped_contracts.append(ma_hop_dong)
-            continue
-
-        totals: Dict[str, Decimal] = {
-            LoaiKhoanTaiChinh.TIEN_THUE.value: Decimal("0"),
-            LoaiKhoanTaiChinh.TIEN_DIEN.value: Decimal("0"),
-            LoaiKhoanTaiChinh.TIEN_NUOC.value: Decimal("0"),
-            LoaiKhoanTaiChinh.PHI_BAO_TRI.value: Decimal("0"),
-            LoaiKhoanTaiChinh.HOAN_TRA.value: Decimal("0"),
+    if not grouped:
+        return {
+            "thang": thang,
+            "nam": nam,
+            "so_cong_no_da_tao": 0,
+            "so_cong_no_bo_qua": 0,
+            "so_hop_dong_thieu_chi_so": 0,
+            "so_hop_dong_thieu_du_lieu": 0,
+            "danh_sach_ma_cn": [],
+            "danh_sach_ma_hd_bo_qua": [],
+            "danh_sach_thieu_chi_so": [],
+            "danh_sach_thieu_du_lieu": [],
         }
-        for row in rows:
-            totals[row.loai_khoan] += row.so_tien
 
-        total_amount = (
-            totals[LoaiKhoanTaiChinh.TIEN_THUE.value]
-            + totals[LoaiKhoanTaiChinh.TIEN_DIEN.value]
-            + totals[LoaiKhoanTaiChinh.TIEN_NUOC.value]
-            + totals[LoaiKhoanTaiChinh.PHI_BAO_TRI.value]
-            - totals[LoaiKhoanTaiChinh.HOAN_TRA.value]
-        )
-        if total_amount < 0:
-            raise BadRequestException(
-                f"Tổng tiền công nợ của hợp đồng {ma_hop_dong} bị âm"
+    hopdong_id_col = get_column(HopDong, ["ma_hop_dong", "ma_hd"])
+    hopdong_mamb_col = get_column(HopDong, ["ma_mat_bang", "ma_mb"])
+    congno_mahd_col = get_column(CongNo, ["ma_hop_dong", "ma_hd"])
+    congno_id_col = get_column(CongNo, ["ma_cong_no", "ma_cn"])
+    meter_mamb_col = get_column(ChiSoDienNuoc, ["ma_mat_bang", "ma_mb"])
+
+    created_debt_ids: List[str] = []
+    skipped_contract_ids: List[str] = []
+    missing_meter_items: List[Dict[str, str]] = []
+    missing_import_items: List[Dict[str, str]] = []
+
+    try:
+        for ma_hd, rows in grouped.items():
+            existing_debt = db.execute(
+                select(CongNo).where(
+                    congno_mahd_col == ma_hd,
+                    CongNo.thang == thang,
+                    CongNo.nam == nam,
+                )
+            ).scalars().first()
+            if existing_debt is not None:
+                skipped_contract_ids.append(ma_hd)
+                continue
+
+            hop_dong = db.execute(
+                select(HopDong).where(hopdong_id_col == ma_hd)
+            ).scalars().first()
+            if hop_dong is None:
+                missing_import_items.append(
+                    {
+                        "ma_hop_dong": ma_hd,
+                        "ly_do": "Không tìm thấy hợp đồng",
+                    }
+                )
+                continue
+
+            ma_mat_bang = getattr(hop_dong, hopdong_mamb_col.key)
+            meter = db.execute(
+                select(ChiSoDienNuoc).where(
+                    meter_mamb_col == ma_mat_bang,
+                    ChiSoDienNuoc.thang == thang,
+                    ChiSoDienNuoc.nam == nam,
+                )
+            ).scalars().first()
+            if meter is None:
+                missing_meter_items.append(
+                    {
+                        "ma_hop_dong": ma_hd,
+                        "ma_mat_bang": ma_mat_bang,
+                        "ly_do": f"Chưa có chỉ số điện nước tháng {thang}/{nam}",
+                    }
+                )
+                continue
+
+            tien_thue = Decimal("0")
+            phi_bao_tri = Decimal("0")
+            tien_hoan = Decimal("0")
+
+            for row in rows:
+                loai_khoan = get_value(row, ["loai_khoan"], "")
+                so_tien = _to_decimal(get_value(row, ["so_tien"], 0))
+                if loai_khoan == "Tiền thuê":
+                    tien_thue += so_tien
+                elif loai_khoan == "Phí bảo trì":
+                    phi_bao_tri += so_tien
+                elif loai_khoan == "Hoàn trả":
+                    tien_hoan += so_tien
+
+            if tien_thue <= 0:
+                missing_import_items.append(
+                    {
+                        "ma_hop_dong": ma_hd,
+                        "ly_do": "Thiếu dòng Tiền thuê trong dữ liệu import",
+                    }
+                )
+                continue
+
+            tien_dien = _to_decimal(get_value(meter, ["tien_dien"], 0))
+            tien_nuoc = _to_decimal(get_value(meter, ["tien_nuoc"], 0))
+            tong_tien = tien_thue + tien_dien + tien_nuoc + phi_bao_tri - tien_hoan
+
+            if tong_tien < 0:
+                missing_import_items.append(
+                    {
+                        "ma_hop_dong": ma_hd,
+                        "ly_do": "Tổng tiền công nợ không được âm",
+                    }
+                )
+                continue
+
+            ma_cn = generate_code("CN")
+            debt = CongNo(
+                ma_cong_no=ma_cn,
+                ma_hop_dong=ma_hd,
+                thang=thang,
+                nam=nam,
+                tien_thue=tien_thue,
+                tien_dien=tien_dien,
+                tien_nuoc=tien_nuoc,
+                phi_bao_tri=phi_bao_tri,
+                tien_hoan=tien_hoan,
+                tong_tien=tong_tien,
+                han_thanh_toan=han_thanh_toan,
+                trang_thai="Chưa thanh toán",
             )
-
-        debt = CongNo(
-            ma_cong_no=_generate_code("CN"),
-            ma_hop_dong=ma_hop_dong,
-            thang=payload.thang,
-            nam=payload.nam,
-            tien_thue=totals[LoaiKhoanTaiChinh.TIEN_THUE.value],
-            tien_dien=totals[LoaiKhoanTaiChinh.TIEN_DIEN.value],
-            tien_nuoc=totals[LoaiKhoanTaiChinh.TIEN_NUOC.value],
-            phi_bao_tri=totals[LoaiKhoanTaiChinh.PHI_BAO_TRI.value],
-            tien_hoan=totals[LoaiKhoanTaiChinh.HOAN_TRA.value],
-            tong_tien=total_amount,
-            han_thanh_toan=None,
-            trang_thai=CongNoStatus.CHUA_THANH_TOAN.value,
-            ngay_lap=current_datetime(),
-        )
-        debts_to_add.append(debt)
-        rows_to_mark_used.extend(rows)
-        created_codes.append(debt.ma_cong_no)
-
-    actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
-    with transaction_context(db):
-        for debt in debts_to_add:
             db.add(debt)
-        for row in rows_to_mark_used:
-            row.trang_thai = DuLieuImportTaiChinhStatus.DA_DUNG_TINH_CONG_NO.value
-        db.flush()
-        write_audit_log(
-            db=db,
-            ma_tk=actor_ma_tk,
-            hanh_dong=AuditAction.TAO_MOI,
-            doi_tuong="CONGNO",
-            ma_doi_tuong=None,
-            chi_tiet="Tính công nợ tháng từ dữ liệu import tài chính",
-        )
+            created_debt_ids.append(ma_cn)
+
+            for row in rows:
+                row.trang_thai = "Đã dùng tính công nợ"
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
-        "so_cong_no_da_tao": len(created_codes),
-        "so_cong_no_bo_qua": len(skipped_contracts),
-        "danh_sach_ma_cn": created_codes,
-        "danh_sach_ma_hd_bo_qua": skipped_contracts,
+        "thang": thang,
+        "nam": nam,
+        "so_cong_no_da_tao": len(created_debt_ids),
+        "so_cong_no_bo_qua": len(skipped_contract_ids),
+        "so_hop_dong_thieu_chi_so": len(missing_meter_items),
+        "so_hop_dong_thieu_du_lieu": len(missing_import_items),
+        "danh_sach_ma_cn": created_debt_ids,
+        "danh_sach_ma_hd_bo_qua": skipped_contract_ids,
+        "danh_sach_thieu_chi_so": missing_meter_items,
+        "danh_sach_thieu_du_lieu": missing_import_items,
     }
 
 
 def list_debts(
     db: Session,
-    filters: CongNoFilter,
+    filters: Optional[Any] = None,
     current_user: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Liệt kê công nợ toàn hệ thống theo bộ lọc."""
-    page, page_size = normalize_pagination(filters.page, filters.page_size)
-    conditions: List[Any] = []
-    if filters.ma_hop_dong:
-        conditions.append(CongNo.ma_hop_dong == filters.ma_hop_dong)
-    if filters.thang is not None:
-        conditions.append(CongNo.thang == filters.thang)
-    if filters.nam is not None:
-        conditions.append(CongNo.nam == filters.nam)
-    if filters.trang_thai:
-        conditions.append(CongNo.trang_thai == _enum_value(filters.trang_thai))
-
     stmt = select(CongNo)
-    count_stmt = select(func.count()).select_from(CongNo)
-    if conditions:
-        clause = and_(*conditions)
-        stmt = stmt.where(clause)
-        count_stmt = count_stmt.where(clause)
 
-    total = db.execute(count_stmt).scalar_one()
+    ma_hop_dong = get_value(filters, ["ma_hop_dong", "ma_hd"], None) if filters else None
+    thang = get_value(filters, ["thang"], None) if filters else None
+    nam = get_value(filters, ["nam"], None) if filters else None
+    trang_thai = get_value(filters, ["trang_thai"], None) if filters else None
+    page = get_value(filters, ["page"], 1) if filters else 1
+    page_size = get_value(filters, ["page_size"], 10) if filters else 10
+
+    if ma_hop_dong:
+        stmt = stmt.where(get_column(CongNo, ["ma_hop_dong", "ma_hd"]) == ma_hop_dong)
+    if thang:
+        stmt = stmt.where(CongNo.thang == thang)
+    if nam:
+        stmt = stmt.where(CongNo.nam == nam)
+    if trang_thai:
+        stmt = stmt.where(CongNo.trang_thai == trang_thai)
+
+    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     items = db.execute(
-        stmt.order_by(CongNo.nam.desc(), CongNo.thang.desc(), CongNo.ngay_lap.desc())
-        .offset(calculate_offset(page, page_size))
+        stmt.order_by(CongNo.nam.desc(), CongNo.thang.desc())
+        .offset((page - 1) * page_size)
         .limit(page_size)
     ).scalars().all()
+
     return {
-        "items": items,
+        "items": [_serialize_debt(item) for item in items],
         "pagination": {
             "page": page,
             "page_size": page_size,
             "total": total,
-            "total_pages": calculate_total_pages(total, page_size),
+            "total_pages": (total + page_size - 1) // page_size if total else 0,
         },
     }
 
 
 def list_my_debts(
     db: Session,
-    filters: CongNoCuaToiFilter,
-    current_user: Any,
+    filters: Optional[Any] = None,
+    current_user: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Liệt kê công nợ của khách thuê hiện tại."""
-    ma_khach_thue = _user_attr(current_user, "ma_kh", "ma_khach_thue")
+    ma_khach_thue = _current_customer_id(current_user)
     if not ma_khach_thue:
-        raise ForbiddenException("Tài khoản hiện tại không phải khách thuê")
+        raise BadRequestException("Tài khoản hiện tại không gắn với khách thuê")
 
-    page, page_size = normalize_pagination(filters.page, filters.page_size)
-    conditions: List[Any] = [HopDong.ma_khach_thue == ma_khach_thue]
-    if filters.ma_hop_dong:
-        conditions.append(CongNo.ma_hop_dong == filters.ma_hop_dong)
-    if filters.thang is not None:
-        conditions.append(CongNo.thang == filters.thang)
-    if filters.nam is not None:
-        conditions.append(CongNo.nam == filters.nam)
-    if filters.trang_thai:
-        conditions.append(CongNo.trang_thai == _enum_value(filters.trang_thai))
+    hopdong_makh_col = get_column(HopDong, ["ma_khach_thue", "ma_kh"])
+    hopdong_mahd_col = get_column(HopDong, ["ma_hop_dong", "ma_hd"])
+    congno_mahd_col = get_column(CongNo, ["ma_hop_dong", "ma_hd"])
 
-    clause = and_(*conditions)
-    count_stmt = (
-        select(func.count())
-        .select_from(CongNo)
-        .join(HopDong, HopDong.ma_hop_dong == CongNo.ma_hop_dong)
-        .where(clause)
-    )
-    stmt = (
-        select(CongNo)
-        .join(HopDong, HopDong.ma_hop_dong == CongNo.ma_hop_dong)
-        .where(clause)
-    )
-    total = db.execute(count_stmt).scalar_one()
+    contract_ids = db.execute(
+        select(hopdong_mahd_col).where(hopdong_makh_col == ma_khach_thue)
+    ).scalars().all()
+
+    if not contract_ids:
+        return {
+            "items": [],
+            "pagination": {"page": 1, "page_size": 10, "total": 0, "total_pages": 0},
+        }
+
+    stmt = select(CongNo).where(congno_mahd_col.in_(contract_ids))
+
+    thang = get_value(filters, ["thang"], None) if filters else None
+    nam = get_value(filters, ["nam"], None) if filters else None
+    trang_thai = get_value(filters, ["trang_thai"], None) if filters else None
+    page = get_value(filters, ["page"], 1) if filters else 1
+    page_size = get_value(filters, ["page_size"], 10) if filters else 10
+
+    if thang:
+        stmt = stmt.where(CongNo.thang == thang)
+    if nam:
+        stmt = stmt.where(CongNo.nam == nam)
+    if trang_thai:
+        stmt = stmt.where(CongNo.trang_thai == trang_thai)
+
+    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     items = db.execute(
-        stmt.order_by(CongNo.nam.desc(), CongNo.thang.desc(), CongNo.ngay_lap.desc())
-        .offset(calculate_offset(page, page_size))
+        stmt.order_by(CongNo.nam.desc(), CongNo.thang.desc())
+        .offset((page - 1) * page_size)
         .limit(page_size)
     ).scalars().all()
 
     return {
-        "items": items,
+        "items": [_serialize_debt(item) for item in items],
         "pagination": {
             "page": page,
             "page_size": page_size,
             "total": total,
-            "total_pages": calculate_total_pages(total, page_size),
+            "total_pages": (total + page_size - 1) // page_size if total else 0,
         },
     }
