@@ -119,8 +119,6 @@ class LoaiKhoanTaiChinh(Enum):
     """Loại khoản mục tài chính có thể import."""
 
     TIEN_THUE = "Tiền thuê"
-    TIEN_DIEN = "Tiền điện"
-    TIEN_NUOC = "Tiền nước"
     PHI_BAO_TRI = "Phí bảo trì"
     HOAN_TRA = "Hoàn trả"
 
