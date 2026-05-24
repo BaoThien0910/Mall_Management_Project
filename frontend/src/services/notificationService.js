@@ -1,36 +1,8 @@
-import axiosClient from './axiosClient';
-
-export async function listAnnouncements(params = {}) {
-  const { data } = await axiosClient.get('/notifications/announcements', { params });
-  return data;
-}
-
-export async function getAnnouncementById(id) {
-  const { data } = await axiosClient.get(`/notifications/announcements/${id}`);
-  return data;
-}
-
-export async function createAnnouncement(announcementData) {
-  const { data } = await axiosClient.post('/notifications/announcements', announcementData);
-  return data;
-}
-
-export async function getInbox(params = {}) {
-  const { data } = await axiosClient.get('/notifications/inbox', { params });
-  return data;
-}
-
-export async function markAsRead(messageId) {
-  const { data } = await axiosClient.put(`/notifications/inbox/${messageId}/read`);
-  return data;
-}
-
-export async function markAllAsRead() {
-  const { data } = await axiosClient.put('/notifications/inbox/read-all');
-  return data;
-}
-
-export async function getNotificationStats() {
-  const { data } = await axiosClient.get('/notifications/stats');
-  return data;
-}
+import { apiClient } from "./apiClient";
+import { buildQuery } from "../utils/data";
+export const notificationService = {
+  create(payload) { return apiClient.post("/thong-bao", payload); },
+  list(params) { return apiClient.get(`/thong-bao${buildQuery(params)}`); },
+  detail(maTb) { return apiClient.get(`/thong-bao/${maTb}`); },
+  revoke(maTb, payload) { return apiClient.patch(`/thong-bao/${maTb}/thu-hoi`, payload); },
+};
