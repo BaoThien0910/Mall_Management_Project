@@ -26,7 +26,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-panel">
         <div className="login-form-wrap">
-          <Title level={2} className="login-title">Quản lý TTTM</Title>
+          <Title level={2} className="login-title">MallManage Pro</Title>
           <Text type="secondary" className="login-subtitle">Hệ thống quản lý trung tâm thương mại</Text>
           <Form layout="vertical" onFinish={onFinish} className="login-form" initialValues={{ remember: true }}>
             <Form.Item label="Email / Tài khoản" name="ten_dang_nhap" rules={[{ required: true, message: "Vui lòng nhập tài khoản!" }]}>
