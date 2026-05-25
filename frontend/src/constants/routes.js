@@ -1,15 +1,12 @@
 import {
   AppstoreOutlined,
   AuditOutlined,
-  BankOutlined,
-  BellOutlined,
   CalendarOutlined,
   ContainerOutlined,
   CreditCardOutlined,
   FileExcelOutlined,
   FileProtectOutlined,
   HomeOutlined,
-  KeyOutlined,
   NotificationOutlined,
   PieChartOutlined,
   ProfileOutlined,
@@ -17,8 +14,9 @@ import {
   ShopOutlined,
   TeamOutlined,
   ToolOutlined,
-  UserOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
+
 import { ROLE } from "./roles";
 
 export const ROUTES = {
@@ -36,6 +34,7 @@ export const ROUTES = {
   PAYMENT: "/finance/thanh-toan",
   FINANCIAL_IMPORT: "/finance/import",
   FINANCIAL_REPORTS: "/reports/financial",
+  METER_READINGS: "/maintenance/chi-so-dien-nuoc",
   INCIDENTS: "/maintenance/su-co",
   MAINTENANCE_SCHEDULES: "/maintenance/lich-bao-tri",
   MAINTENANCE_REPORTS: "/reports/maintenance",
@@ -56,13 +55,20 @@ export const routePermissions = {
   [ROUTES.PAYMENT]: [ROLE.KHACH_THUE],
   [ROUTES.FINANCIAL_IMPORT]: [ROLE.TP_KDTC, ROLE.NV_KDTC],
   [ROUTES.FINANCIAL_REPORTS]: [ROLE.BQL, ROLE.TP_KDTC],
+  [ROUTES.METER_READINGS]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.INCIDENTS]: [ROLE.BQL, ROLE.TP_VHBT, ROLE.NV_VHBT, ROLE.KHACH_THUE],
   [ROUTES.MAINTENANCE_SCHEDULES]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.MAINTENANCE_REPORTS]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.NOTIFICATIONS]: [ROLE.BQL, ROLE.QTV, ROLE.TP_KDTC, ROLE.NV_KDTC, ROLE.TP_VHBT, ROLE.NV_VHBT, ROLE.KHACH_THUE],
 };
 
-const item = (key, label, icon, allowedRoles) => ({ key, label, icon, allowedRoles });
+const item = (key, label, icon, allowedRoles, badgeKey = null) => ({
+  key,
+  label,
+  icon,
+  allowedRoles,
+  badgeKey,
+});
 
 export const menuItems = [
   item(ROUTES.DASHBOARD, "Bảng điều khiển", AppstoreOutlined, routePermissions[ROUTES.DASHBOARD]),
@@ -72,13 +78,14 @@ export const menuItems = [
   item(ROUTES.PREMISES, "Mặt bằng", ShopOutlined, routePermissions[ROUTES.PREMISES]),
   item(ROUTES.CONTRACTS, "Hợp đồng", FileProtectOutlined, routePermissions[ROUTES.CONTRACTS]),
   item(ROUTES.MY_CONTRACTS, "Hợp đồng của tôi", ProfileOutlined, routePermissions[ROUTES.MY_CONTRACTS]),
-  item(ROUTES.RENT_REQUESTS, "Yêu cầu thuê thêm", HomeOutlined, routePermissions[ROUTES.RENT_REQUESTS]),
-  item(ROUTES.DEBTS, "Công nợ", CreditCardOutlined, routePermissions[ROUTES.DEBTS]),
-  item(ROUTES.MY_DEBTS, "Công nợ & Thanh toán", CreditCardOutlined, routePermissions[ROUTES.MY_DEBTS]),
-  item(ROUTES.FINANCIAL_IMPORT, "Import tài chính", FileExcelOutlined, routePermissions[ROUTES.FINANCIAL_IMPORT]),
+  item(ROUTES.RENT_REQUESTS, "Yêu cầu thuê thêm", HomeOutlined, routePermissions[ROUTES.RENT_REQUESTS], "rent_requests"),
+  item(ROUTES.DEBTS, "Công nợ", CreditCardOutlined, routePermissions[ROUTES.DEBTS], "debts"),
+  item(ROUTES.MY_DEBTS, "Công nợ & Thanh toán", CreditCardOutlined, routePermissions[ROUTES.MY_DEBTS], "my_debts"),
+  item(ROUTES.FINANCIAL_IMPORT, "Import tài chính", FileExcelOutlined, routePermissions[ROUTES.FINANCIAL_IMPORT], "import_errors"),
   item(ROUTES.FINANCIAL_REPORTS, "Báo cáo tài chính", PieChartOutlined, routePermissions[ROUTES.FINANCIAL_REPORTS]),
-  item(ROUTES.INCIDENTS, "Sự cố bảo trì", ToolOutlined, routePermissions[ROUTES.INCIDENTS]),
-  item(ROUTES.MAINTENANCE_SCHEDULES, "Lịch bảo trì", CalendarOutlined, routePermissions[ROUTES.MAINTENANCE_SCHEDULES]),
+  item(ROUTES.METER_READINGS, "Chỉ số điện nước", ThunderboltOutlined, routePermissions[ROUTES.METER_READINGS]),
+  item(ROUTES.INCIDENTS, "Sự cố bảo trì", ToolOutlined, routePermissions[ROUTES.INCIDENTS], "incidents"),
+  item(ROUTES.MAINTENANCE_SCHEDULES, "Lịch bảo trì", CalendarOutlined, routePermissions[ROUTES.MAINTENANCE_SCHEDULES], "maintenance_schedules"),
   item(ROUTES.MAINTENANCE_REPORTS, "Báo cáo bảo trì", ContainerOutlined, routePermissions[ROUTES.MAINTENANCE_REPORTS]),
-  item(ROUTES.NOTIFICATIONS, "Thông báo", NotificationOutlined, routePermissions[ROUTES.NOTIFICATIONS]),
+  item(ROUTES.NOTIFICATIONS, "Thông báo", NotificationOutlined, routePermissions[ROUTES.NOTIFICATIONS], "notifications"),
 ];
