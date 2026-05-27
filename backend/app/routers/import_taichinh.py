@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 from app.constants.roles import KDTC_ROLES
 from app.database import get_db
 from app.dependencies import require_roles
-from app.schemas.dulieu_import_taichinh import DuLieuImportTaiChinhFilter
+from app.schemas.dulieu_import_taichinh import (
+    BatchDeleteImportRequest,
+    DuLieuImportTaiChinhFilter,
+)
 from app.services import excel_import_service
 from app.utils.response import success_response
 
@@ -58,3 +61,25 @@ def list_import_history(
         message="Lấy lịch sử import tài chính thành công",
         data=result,
     )
+
+
+@router.post(
+    "/batch-delete",
+    status_code=status.HTTP_200_OK,
+    response_model=Dict[str, Any],
+)
+def batch_delete_imports(
+    payload: BatchDeleteImportRequest,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(require_roles(list(KDTC_ROLES))),
+) -> Dict[str, Any]:
+    result = excel_import_service.batch_delete_imports(
+        db=db,
+        ids=payload.ids,
+        current_user=current_user,
+    )
+    return success_response(
+        message="Xóa các bản ghi import tài chính thành công",
+        data=result,
+    )
+

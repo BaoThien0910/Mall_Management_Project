@@ -1,5 +1,6 @@
 # File: app/services/excel_import_service.py
 from decimal import Decimal, InvalidOperation
+from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 from fastapi import UploadFile
@@ -93,7 +94,8 @@ def import_financial_excel(
 
     try:
         file.file.seek(0)
-        workbook = load_workbook(file.file, data_only=True)
+        file_contents = file.file.read()
+        workbook = load_workbook(BytesIO(file_contents), data_only=True)
     except Exception:
         raise BadRequestException("Không đọc được file Excel")
 
@@ -106,6 +108,28 @@ def import_financial_excel(
     _validate_headers(headers)
 
     hopdong_id_col = get_column(HopDong, ["ma_hop_dong", "ma_hd"])
+
+    # 1. Thu thập tất cả các mã hợp đồng từ file Excel để truy vấn một lần
+    excel_ma_hds = set()
+    for row in rows[1:]:
+        if row is not None and not all(value is None for value in row):
+            values = list(row)
+            if len(values) > 0 and values[0]:
+                excel_ma_hds.add(_normalize_text(values[0]))
+
+    # 2. Lấy danh sách các khoản đã import thành công hoặc đang dùng của các hợp đồng này
+    existing_keys = set()
+    if excel_ma_hds:
+        ma_hd_col = get_column(DuLieuImportTaiChinh, ["ma_hop_dong", "ma_hd"])
+        stmt = select(DuLieuImportTaiChinh).where(
+            ma_hd_col.in_(list(excel_ma_hds)),
+            DuLieuImportTaiChinh.trang_thai.in_(["Hợp lệ", "Đã dùng tính công nợ"])
+        )
+        existing_records = db.execute(stmt).scalars().all()
+        for r in existing_records:
+            existing_keys.add((r.ma_hop_dong, r.thang, r.nam, r.loai_khoan))
+
+    seen_in_file = set()
 
     total_rows = 0
     valid_rows = 0
@@ -173,6 +197,17 @@ def import_financial_excel(
             if hop_dong is None:
                 row_errors.append("Mã hợp đồng không tồn tại")
 
+        # 3. Check trùng lặp dữ liệu (trong file và trong hệ thống)
+        if ma_hd and (1 <= thang <= 12) and (2000 <= nam <= 2100) and loai_khoan:
+            row_key = (ma_hd, thang, nam, loai_khoan)
+            if row_key in seen_in_file:
+                row_errors.append("Dòng bị trùng lặp trong file Excel")
+            else:
+                seen_in_file.add(row_key)
+
+            if row_key in existing_keys:
+                row_errors.append(f"Khoản thu cho hợp đồng này đã tồn tại trong hệ thống ở kỳ {thang}/{nam}")
+
         if row_errors:
             invalid_rows += 1
             error_details.append(
@@ -182,8 +217,24 @@ def import_financial_excel(
                     "loi": "; ".join(row_errors),
                 }
             )
-            # Chỉ lưu dòng lỗi nếu vẫn đủ FK hợp lệ để không vi phạm database.
-            if hop_dong is not None and thang and nam and loai_khoan and so_tien > 0:
+            # Chỉ lưu dòng lỗi nếu thỏa mãn các check constraint của database (ví dụ: tháng 1-12, loại khoản hợp lệ, số tiền > 0, v.v.).
+            db_thang_valid = 1 <= thang <= 12
+            db_loai_khoan_valid = loai_khoan in {
+                "Tiền thuê",
+                "Tiền điện",
+                "Tiền nước",
+                "Phí bảo trì",
+                "Hoàn trả",
+            }
+            db_so_tien_valid = so_tien > 0
+
+            if (
+                hop_dong is not None
+                and db_thang_valid
+                and nam
+                and db_loai_khoan_valid
+                and db_so_tien_valid
+            ):
                 import_items.append(
                     _build_import_row(
                         ma_hd=ma_hd,
@@ -290,3 +341,51 @@ def list_import_history(
             "total_pages": (total + page_size - 1) // page_size if total else 0,
         },
     }
+
+
+def batch_delete_imports(
+    db: Session,
+    ids: List[str],
+    current_user: Any,
+) -> Dict[str, Any]:
+    """Xóa hàng loạt các bản ghi import tài chính.
+    Chỉ cho phép xóa các bản ghi ở trạng thái 'Hợp lệ' hoặc 'Lỗi'.
+    Không cho phép xóa bản ghi ở trạng thái 'Đã dùng tính công nợ' để bảo toàn dữ liệu.
+    """
+    if not ids:
+        raise BadRequestException("Không có bản ghi nào được chọn để xóa")
+
+    ma_import_col = get_column(DuLieuImportTaiChinh, ["ma_import", "maimport"])
+    stmt = select(DuLieuImportTaiChinh).where(ma_import_col.in_(ids))
+    records = db.execute(stmt).scalars().all()
+
+    # Kiểm tra tồn tại
+    if len(records) != len(ids):
+        found_ids = {get_value(r, ["ma_import", "maimport"]) for r in records}
+        missing_ids = set(ids) - found_ids
+        raise BadRequestException(f"Một số bản ghi không tồn tại: {list(missing_ids)}")
+
+    # Kiểm tra trạng thái đã sử dụng
+    for r in records:
+        trang_thai = get_value(r, ["trang_thai"])
+        if trang_thai == "Đã dùng tính công nợ":
+            ma_imp = get_value(r, ["ma_import", "maimport"])
+            raise BadRequestException(
+                f"Không thể xóa bản ghi {ma_imp} vì đã được sử dụng để tính công nợ"
+            )
+
+    # Xóa
+    deleted_count = 0
+    try:
+        for r in records:
+            db.delete(r)
+            deleted_count += 1
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return {
+        "so_luong_xoa": deleted_count,
+    }
+

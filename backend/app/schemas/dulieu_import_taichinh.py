@@ -64,3 +64,8 @@ class KetQuaImportTaiChinhResponse(BaseModel):
     so_dong_hop_le: int = Field(..., ge=0)
     so_dong_loi: int = Field(..., ge=0)
     danh_sach_loi: List[LoiDongImportResponse] = Field(default_factory=list)
+
+
+class BatchDeleteImportRequest(BaseModel):
+    ids: List[str] = Field(..., min_length=1)
+

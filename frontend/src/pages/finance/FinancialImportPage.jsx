@@ -1,5 +1,5 @@
-import { UploadOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Space, Upload, message } from "antd";
+import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Modal, Space, Upload, message } from "antd";
 import { useCallback, useState } from "react";
 
 import PageHeader from "../../components/common/PageHeader";
@@ -12,12 +12,46 @@ import { formatMoney, pick, pickId } from "../../utils/data";
 
 export default function FinancialImportPage() {
   const [file, setFile] = useState(null);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetcher = useCallback((params) => financialImportService.list(params), []);
   const { items, loading, reload } = useCrudList(fetcher, {
     page: 1,
     page_size: 20,
   });
+
+  const cancelDeleteMode = () => {
+    setIsDeleteMode(false);
+    setSelectedRowKeys([]);
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) return;
+
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa ${selectedRowKeys.length} dòng dữ liệu import tài chính đã chọn không? Bản ghi đã dùng để tính công nợ sẽ không thể xóa. Hành động này không thể hoàn tác.`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setDeleteLoading(true);
+        try {
+          await financialImportService.deleteMany(selectedRowKeys);
+          message.success("Xóa dữ liệu import tài chính thành công!");
+          setSelectedRowKeys([]);
+          setIsDeleteMode(false);
+          reload();
+        } catch (error) {
+          showApiError(error);
+        } finally {
+          setDeleteLoading(false);
+        }
+      },
+    });
+  };
 
   const upload = async () => {
     if (!file) return message.warning("Chọn file .xlsx trước");
@@ -77,19 +111,47 @@ export default function FinancialImportPage() {
         />
 
         <Space wrap className="toolbar-space">
-          <Upload
-            beforeUpload={(selectedFile) => {
-              setFile(selectedFile);
-              return false;
-            }}
-            maxCount={1}
-            accept=".xlsx,.xls"
-          >
-            <Button icon={<UploadOutlined />}>Chọn file .xlsx</Button>
-          </Upload>
-          <Button type="primary" onClick={upload} disabled={!file}>
-            Tải lên và xử lý
-          </Button>
+          {!isDeleteMode ? (
+            <>
+              <Upload
+                beforeUpload={(selectedFile) => {
+                  setFile(selectedFile);
+                  return false;
+                }}
+                maxCount={1}
+                accept=".xlsx,.xls"
+              >
+                <Button icon={<UploadOutlined />}>Chọn file .xlsx</Button>
+              </Upload>
+              <Button type="primary" onClick={upload} disabled={!file}>
+                Tải lên và xử lý
+              </Button>
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => setIsDeleteMode(true)}
+              >
+                Xóa
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                loading={deleteLoading}
+                disabled={selectedRowKeys.length === 0}
+                onClick={handleBatchDelete}
+              >
+                Xác nhận xóa ({selectedRowKeys.length} dòng)
+              </Button>
+              <Button onClick={cancelDeleteMode}>
+                Hủy
+              </Button>
+            </>
+          )}
         </Space>
       </Card>
 
@@ -98,6 +160,10 @@ export default function FinancialImportPage() {
         columns={columns}
         dataSource={items}
         loading={loading}
+        rowSelection={isDeleteMode ? {
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys),
+        } : undefined}
       />
     </>
   );

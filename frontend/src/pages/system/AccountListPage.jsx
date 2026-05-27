@@ -1,4 +1,4 @@
-import { EditOutlined, PlusOutlined, StopOutlined } from "@ant-design/icons";
+import { LockOutlined, PlusOutlined, UnlockOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Popconfirm, Select, Space, message } from "antd";
 import { useCallback, useState } from "react";
 import PageHeader from "../../components/common/PageHeader";
@@ -37,12 +37,36 @@ export default function AccountListPage() {
     } catch (error) { showApiError(error); }
   };
 
+  const enable = async (row) => {
+    try {
+      const id = pickId(row, ["ma_tai_khoan", "ma_tk", "MATK"]);
+      await accountService.enable(id, { ly_do: "Khôi phục từ giao diện quản trị" });
+      message.success("Đã khôi phục tài khoản");
+      reload();
+    } catch (error) { showApiError(error); }
+  };
+
   const columns = [
     { title: "Tên người dùng", render: (_, r) => pick(r, ["ten_dang_nhap", "username", "TENDANGNHAP"]) },
     { title: "Mã tài khoản", render: (_, r) => pick(r, ["ma_tai_khoan", "ma_tk", "MATK"]) },
     { title: "Vai trò", render: (_, r) => <StatusTag value={ROLE_LABEL[pick(r, ["ma_vai_tro", "MAVAITRO"])] || pick(r, ["ma_vai_tro", "MAVAITRO"])} /> },
     { title: "Trạng thái", render: (_, r) => <StatusTag value={pick(r, ["trang_thai", "TRANGTHAI"])} /> },
-    { title: "Thao tác", align: "right", render: (_, r) => <Space><Button type="text" icon={<EditOutlined />} /><Popconfirm title="Vô hiệu hóa tài khoản này?" onConfirm={() => disable(r)}><Button danger type="text" icon={<StopOutlined />} /></Popconfirm></Space> },
+    { title: "Thao tác", align: "right", render: (_, r) => {
+      const isActive = pick(r, ["trang_thai", "TRANGTHAI"]) === "Hoạt động";
+      return (
+        <Space>
+          {isActive ? (
+            <Popconfirm title="Vô hiệu hóa tài khoản này?" onConfirm={() => disable(r)}>
+              <Button danger type="text" icon={<LockOutlined />} />
+            </Popconfirm>
+          ) : (
+            <Popconfirm title="Khôi phục tài khoản này?" onConfirm={() => enable(r)}>
+              <Button style={{ color: '#52c41a' }} type="text" icon={<UnlockOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      );
+    }},
   ];
 
   return <>

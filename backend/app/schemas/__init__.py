@@ -8,6 +8,7 @@ from .auth import (
 from .taikhoan import (
     TaiKhoanCreate,
     TaiKhoanDisableRequest,
+    TaiKhoanEnableRequest,
     TaiKhoanFilter,
     TaiKhoanResponse,
 )
@@ -100,6 +101,7 @@ __all__ = [
     "CurrentUserResponse",
     "TaiKhoanCreate",
     "TaiKhoanDisableRequest",
+    "TaiKhoanEnableRequest",
     "TaiKhoanResponse",
     "TaiKhoanFilter",
     "VaiTroResponse",

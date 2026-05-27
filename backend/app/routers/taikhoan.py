@@ -10,6 +10,7 @@ from app.dependencies import require_roles
 from app.schemas.taikhoan import (
     TaiKhoanCreate,
     TaiKhoanDisableRequest,
+    TaiKhoanEnableRequest,
     TaiKhoanFilter,
 )
 from app.services import account_service
@@ -83,5 +84,28 @@ def disable_account(
     )
     return success_response(
         message="Vô hiệu hóa tài khoản thành công",
+        data=result,
+    )
+
+
+@router.patch(
+    "/{ma_tk}/khoi-phuc",
+    status_code=status.HTTP_200_OK,
+    response_model=Dict[str, Any],
+)
+def enable_account(
+    ma_tk: str,
+    payload: TaiKhoanEnableRequest,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(require_roles([RoleCode.QTV])),
+) -> Dict[str, Any]:
+    result = account_service.enable_account(
+        db=db,
+        ma_tk=ma_tk,
+        payload=payload,
+        current_user=current_user,
+    )
+    return success_response(
+        message="Khôi phục tài khoản thành công",
         data=result,
     )
