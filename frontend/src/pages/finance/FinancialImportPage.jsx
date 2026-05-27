@@ -1,170 +1,186 @@
-import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Modal, Space, Upload, message } from "antd";
-import { useCallback, useState } from "react";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Typography,
+  Card,
+  Upload,
+  Button,
+  Space,
+  Table,
+  Alert,
+  Steps,
+  message,
+  Row,
+  Col,
+} from 'antd';
+import {
+  ArrowLeftOutlined,
+  InboxOutlined,
+  DownloadOutlined,
+  CalculatorOutlined,
+} from '@ant-design/icons';
+import { importFinancialFile } from '../../services/paymentService';
+import { calculateDebt } from '../../services/debtService';
 
-import PageHeader from "../../components/common/PageHeader";
-import ResponsiveTable from "../../components/common/ResponsiveTable";
-import StatusTag from "../../components/common/StatusTag";
-import { financialImportService } from "../../services/financialImportService";
-import { showApiError } from "../../services/apiClient";
-import { useCrudList } from "../../hooks/useCrudList";
-import { formatMoney, pick, pickId } from "../../utils/data";
+const { Title, Text } = Typography;
+const { Dragger } = Upload;
+
+const MOCK_PREVIEW = [
+  { key: '1', tenant: 'Starbucks', premise: 'GF-01', period: '11/2025', rent: 38000000, utility: 5100000, status: 'Hợp lệ' },
+  { key: '2', tenant: 'Uniqlo', premise: 'L2-12', period: '11/2025', rent: 75000000, utility: 6800000, status: 'Hợp lệ' },
+  { key: '3', tenant: 'Highlands Coffee', premise: 'GF-08', period: '11/2025', rent: 24000000, utility: 3200000, status: 'Thiếu chỉ số điện' },
+];
 
 export default function FinancialImportPage() {
-  const [file, setFile] = useState(null);
-  const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const navigate = useNavigate();
+  const basePath = '/staff/finance';
+  const [fileList, setFileList] = useState([]);
+  const [step, setStep] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const [preview] = useState(MOCK_PREVIEW);
 
-  const fetcher = useCallback((params) => financialImportService.list(params), []);
-  const { items, loading, reload } = useCrudList(fetcher, {
-    page: 1,
-    page_size: 20,
-  });
-
-  const cancelDeleteMode = () => {
-    setIsDeleteMode(false);
-    setSelectedRowKeys([]);
-  };
-
-  const handleBatchDelete = () => {
-    if (selectedRowKeys.length === 0) return;
-
-    Modal.confirm({
-      title: "Xác nhận xóa",
-      content: `Bạn có chắc chắn muốn xóa ${selectedRowKeys.length} dòng dữ liệu import tài chính đã chọn không? Bản ghi đã dùng để tính công nợ sẽ không thể xóa. Hành động này không thể hoàn tác.`,
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        setDeleteLoading(true);
-        try {
-          await financialImportService.deleteMany(selectedRowKeys);
-          message.success("Xóa dữ liệu import tài chính thành công!");
-          setSelectedRowKeys([]);
-          setIsDeleteMode(false);
-          reload();
-        } catch (error) {
-          showApiError(error);
-        } finally {
-          setDeleteLoading(false);
-        }
-      },
-    });
-  };
-
-  const upload = async () => {
-    if (!file) return message.warning("Chọn file .xlsx trước");
-
+  const handleImport = async () => {
+    if (fileList.length === 0) {
+      message.warning('Vui lòng chọn file Excel trước khi nhập dữ liệu');
+      return;
+    }
+    setImporting(true);
     try {
-      const result = await financialImportService.upload(file);
-      message.success(`Import thành công: ${result?.so_dong_hop_le ?? ""} dòng hợp lệ`);
-      setFile(null);
-      reload();
-    } catch (error) {
-      showApiError(error);
+      const formData = new FormData();
+      formData.append('file', fileList[0].originFileObj || fileList[0]);
+      const result = await importFinancialFile(formData);
+      message.success(result.message || `Đã nhập ${result.imported} dòng dữ liệu`);
+      setStep(1);
+    } catch {
+      message.error('Nhập dữ liệu thất bại');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleCalculate = async () => {
+    setCalculating(true);
+    try {
+      await calculateDebt({ period: '11/2025' });
+      message.success('Đã tính toán công nợ cho kỳ 11/2025');
+      setStep(2);
+    } catch {
+      message.error('Tính công nợ thất bại');
+    } finally {
+      setCalculating(false);
     }
   };
 
   const columns = [
+    { title: 'Khách thuê', dataIndex: 'tenant', key: 'tenant' },
+    { title: 'Mặt bằng', dataIndex: 'premise', key: 'premise', width: 100 },
+    { title: 'Kỳ', dataIndex: 'period', key: 'period', width: 90 },
     {
-      title: "Mã import",
-      render: (_, record) => pick(record, ["ma_import", "MAIMPORT"]),
+      title: 'Tiền thuê',
+      dataIndex: 'rent',
+      key: 'rent',
+      align: 'right',
+      render: (v) => v?.toLocaleString('vi-VN'),
     },
     {
-      title: "Hợp đồng",
-      render: (_, record) => pick(record, ["ma_hop_dong", "MAHD"]),
+      title: 'Điện nước',
+      dataIndex: 'utility',
+      key: 'utility',
+      align: 'right',
+      render: (v) => v?.toLocaleString('vi-VN'),
     },
     {
-      title: "Kỳ",
-      render: (_, record) => `${pick(record, ["thang", "THANG"])} / ${pick(record, ["nam", "NAM"])}`,
-    },
-    {
-      title: "Loại khoản",
-      render: (_, record) => pick(record, ["loai_khoan", "LOAIKHOAN"]),
-    },
-    {
-      title: "Số tiền",
-      render: (_, record) => formatMoney(pick(record, ["so_tien", "SOTIEN"])),
-    },
-    {
-      title: "Trạng thái",
-      render: (_, record) => <StatusTag value={pick(record, ["trang_thai", "TRANGTHAI"])} />,
-    },
-    {
-      title: "Lỗi",
-      render: (_, record) => pick(record, ["loi_chi_tiet", "LOI_CHITIET"], "-"),
+      title: 'Kiểm tra',
+      dataIndex: 'status',
+      key: 'status',
+      render: (s) => (
+        <Text type={s === 'Hợp lệ' ? 'success' : 'danger'}>{s}</Text>
+      ),
     },
   ];
 
   return (
     <>
-      <PageHeader title="Import tài chính" breadcrumb={["Tài chính", "Import Excel"]} />
+      <Button
+        icon={<ArrowLeftOutlined />}
+        style={{ marginBottom: 16 }}
+        onClick={() => navigate(basePath)}
+      >
+        Quay lại công nợ
+      </Button>
 
-      <Card className="toolbar-card">
-        <Alert
-          type="info"
-          showIcon
-          className="mb-16"
-          message="Mẫu Excel tài chính"
-          description="Header: MAHD | THANG | NAM | LOAIKHOAN | SOTIEN | GHICHU. LOAIKHOAN hợp lệ: Tiền thuê, Phí bảo trì, Hoàn trả. Tiền điện/nước được lấy từ chức năng Chỉ số điện nước, không nhập trong Excel."
-        />
+      <Title level={3} style={{ marginBottom: 24 }}>
+        Nhập dữ liệu & Tính công nợ
+      </Title>
 
-        <Space wrap className="toolbar-space">
-          {!isDeleteMode ? (
-            <>
-              <Upload
-                beforeUpload={(selectedFile) => {
-                  setFile(selectedFile);
-                  return false;
-                }}
-                maxCount={1}
-                accept=".xlsx,.xls"
-              >
-                <Button icon={<UploadOutlined />}>Chọn file .xlsx</Button>
-              </Upload>
-              <Button type="primary" onClick={upload} disabled={!file}>
-                Tải lên và xử lý
-              </Button>
-              <Button
-                type="primary"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => setIsDeleteMode(true)}
-              >
-                Xóa
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="primary"
-                danger
-                icon={<DeleteOutlined />}
-                loading={deleteLoading}
-                disabled={selectedRowKeys.length === 0}
-                onClick={handleBatchDelete}
-              >
-                Xác nhận xóa ({selectedRowKeys.length} dòng)
-              </Button>
-              <Button onClick={cancelDeleteMode}>
-                Hủy
-              </Button>
-            </>
-          )}
-        </Space>
-      </Card>
-
-      <ResponsiveTable
-        rowKey={(record) => pickId(record, ["ma_import", "MAIMPORT"])}
-        columns={columns}
-        dataSource={items}
-        loading={loading}
-        rowSelection={isDeleteMode ? {
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys),
-        } : undefined}
+      <Steps
+        current={step}
+        style={{ marginBottom: 32, maxWidth: 720 }}
+        items={[
+          { title: 'Tải file Excel' },
+          { title: 'Kiểm tra dữ liệu' },
+          { title: 'Tính công nợ' },
+        ]}
       />
+
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={10}>
+          <Card title="1. Tải file lên" style={{ borderRadius: 8, marginBottom: 24 }}>
+            <Alert
+              type="info"
+              message="Chấp nhận file .xlsx, .xls. Dữ liệu sẽ được xử lý khi kết nối máy chủ."
+              style={{ marginBottom: 16 }}
+            />
+            <Dragger
+              accept=".xlsx,.xls"
+              maxCount={1}
+              fileList={fileList}
+              beforeUpload={() => false}
+              onChange={({ fileList: fl }) => setFileList(fl)}
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">Kéo thả hoặc bấm để chọn file Excel</p>
+              <p className="ant-upload-hint">Dữ liệu tiền thuê, điện nước, phí dịch vụ theo kỳ</p>
+            </Dragger>
+            <Space style={{ marginTop: 16 }} wrap>
+              <Button icon={<DownloadOutlined />}>Tải mẫu Excel</Button>
+              <Button type="primary" loading={importing} onClick={handleImport}>
+                Nhập dữ liệu
+              </Button>
+            </Space>
+          </Card>
+
+          <Card title="2. Tính công nợ" style={{ borderRadius: 8 }}>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+              Sau khi nhập và kiểm tra, hệ thống sẽ tạo công nợ theo hợp đồng và chỉ số điện nước.
+            </Text>
+            <Button
+              type="primary"
+              icon={<CalculatorOutlined />}
+              loading={calculating}
+              disabled={step < 1}
+              onClick={handleCalculate}
+            >
+              Tính công nợ kỳ hiện tại
+            </Button>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={14}>
+          <Card title="Xem trước dữ liệu" style={{ borderRadius: 8 }}>
+            <Table
+              columns={columns}
+              dataSource={preview}
+              pagination={false}
+              size="small"
+              scroll={{ x: 600 }}
+            />
+          </Card>
+        </Col>
+      </Row>
     </>
   );
 }
