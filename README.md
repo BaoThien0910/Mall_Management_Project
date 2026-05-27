@@ -2,7 +2,7 @@ Các tài khoản seed:
 
 {
   "ten_dang_nhap": "qtv_admin",
-  "mat_khau": "admin1234"
+  "mat_khau": "Admin1234"
 }
 
 {
