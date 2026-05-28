@@ -1,4 +1,4 @@
-import { Spin } from "antd";
+import { Spin, message } from "antd";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -10,8 +10,10 @@ import {
 } from "react-router-dom";
 
 import AppShell from "./layouts/AppShell";
-import { bootstrapAuth } from "./store/authSlice";
+import { bootstrapAuth, logoutLocal } from "./store/authSlice";
 import { routePermissions, ROUTES } from "./constants/routes";
+import { parseJwt } from "./utils/storage";
+import { registerLogoutCallback } from "./services/apiClient";
 
 import LoginPage from "./pages/auth/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -35,11 +37,61 @@ import NotificationListPage from "./pages/notifications/NotificationListPage";
 
 function AuthBootstrap({ children }) {
   const dispatch = useDispatch();
-  const { bootstrapped, loading } = useSelector((state) => state.auth);
+  const { bootstrapped, loading, token } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(bootstrapAuth());
   }, [dispatch]);
+
+  // Đăng ký callback xử lý đăng xuất khi API gặp lỗi 401 (bị động)
+  useEffect(() => {
+    registerLogoutCallback(() => {
+      dispatch(logoutLocal());
+      message.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    });
+  }, [dispatch]);
+
+  // Hẹn giờ tự động đăng xuất chủ động khi hết hạn token JWT
+  useEffect(() => {
+    console.log("DEBUG Token Auto-Logout: useEffect running with token:", token ? `${token.substring(0, 15)}...` : null);
+    if (!token) return;
+
+    const payload = parseJwt(token);
+    console.log("DEBUG Token Auto-Logout: parsed payload:", payload);
+    if (!payload) {
+      console.warn("DEBUG Token Auto-Logout: parseJwt returned null!");
+      return;
+    }
+    if (!payload.exp) {
+      console.warn("DEBUG Token Auto-Logout: exp is missing in payload!");
+      return;
+    }
+
+    const expirationTime = payload.exp * 1000; // Đổi giây sang mili giây
+    const currentTime = Date.now();
+    const delay = expirationTime - currentTime;
+    console.log("DEBUG Token Auto-Logout: Expiration Time:", new Date(expirationTime).toLocaleString());
+    console.log("DEBUG Token Auto-Logout: Current Time:", new Date(currentTime).toLocaleString());
+    console.log("DEBUG Token Auto-Logout: Delay (ms):", delay);
+
+    if (delay <= 0) {
+      console.log("DEBUG Token Auto-Logout: delay <= 0, logging out immediately");
+      dispatch(logoutLocal());
+      message.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    } else {
+      console.log("DEBUG Token Auto-Logout: setting timeout for delay:", delay);
+      const timer = setTimeout(() => {
+        console.log("DEBUG Token Auto-Logout: timeout fired, logging out");
+        dispatch(logoutLocal());
+        message.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      }, delay);
+
+      return () => {
+        console.log("DEBUG Token Auto-Logout: clearing timeout");
+        clearTimeout(timer);
+      };
+    }
+  }, [token, dispatch]);
 
   if (!bootstrapped && loading) {
     return (

@@ -48,7 +48,10 @@ def get_current_user(
     if token is None or not token.strip():
         raise UnauthorizedException("Thiếu access token")
 
-    payload = decode_access_token(token)
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        raise UnauthorizedException("Token không hợp lệ hoặc đã hết hạn")
     ma_tk = payload.get("ma_tk") or payload.get("sub")
 
     if not ma_tk:

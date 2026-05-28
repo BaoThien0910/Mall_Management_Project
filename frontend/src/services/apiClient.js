@@ -10,6 +10,12 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
+let logoutCallback = null;
+
+export const registerLogoutCallback = (callback) => {
+  logoutCallback = callback;
+};
+
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
 
@@ -47,6 +53,9 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       clearAccessToken();
+      if (logoutCallback) {
+        logoutCallback();
+      }
     }
 
     return Promise.reject({
