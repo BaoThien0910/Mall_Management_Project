@@ -54,9 +54,10 @@ class MatBangResponse(BaseModel):
 
 
 class MatBangFilter(BaseModel):
-    trang_thai: Optional[MatBangStatus] = None
-    tang: Optional[int] = None
-    loai_mat_bang: Optional[str] = Field(default=None, max_length=50)
+    keyword: Optional[str] = None
+    trang_thai: Optional[str] = None
+    tang: Optional[str] = None
+    loai_mat_bang: Optional[str] = Field(default=None, max_length=255)
     dien_tich_tu: Optional[Decimal] = Field(default=None, ge=0)
     dien_tich_den: Optional[Decimal] = Field(default=None, ge=0)
     page: int = Field(default=1, ge=1)

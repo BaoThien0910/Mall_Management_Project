@@ -1,7 +1,7 @@
 # File: app/services/premise_service.py
 from typing import Any, Dict, List
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -37,15 +37,34 @@ def list_premises(
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = []
 
+    if filters.keyword:
+        conditions.append(
+            or_(
+                MatBang.ma_mat_bang.ilike(f"%{filters.keyword}%"),
+                MatBang.vi_tri.ilike(f"%{filters.keyword}%"),
+            )
+        )
+
     if _role_value(current_user) == RoleCode.KHACH_THUE.value:
         conditions.append(MatBang.trang_thai == MatBangStatus.CON_TRONG.value)
     elif filters.trang_thai:
-        conditions.append(MatBang.trang_thai == _enum_value(filters.trang_thai))
+        status_list = [s.strip() for s in filters.trang_thai.split(",") if s.strip()]
+        if status_list:
+            conditions.append(MatBang.trang_thai.in_(status_list))
 
     if filters.tang is not None:
-        conditions.append(MatBang.tang == filters.tang)
+        try:
+            floor_list = [int(f.strip()) for f in str(filters.tang).split(",") if f.strip()]
+            if floor_list:
+                conditions.append(MatBang.tang.in_(floor_list))
+        except ValueError:
+            pass
+
     if filters.loai_mat_bang:
-        conditions.append(MatBang.loai_mat_bang.ilike(f"%{filters.loai_mat_bang}%"))
+        type_list = [t.strip() for t in filters.loai_mat_bang.split(",") if t.strip()]
+        if type_list:
+            type_conditions = [MatBang.loai_mat_bang.ilike(f"%{t}%") for t in type_list]
+            conditions.append(or_(*type_conditions))
     if filters.dien_tich_tu is not None:
         conditions.append(MatBang.dien_tich >= filters.dien_tich_tu)
     if filters.dien_tich_den is not None:
