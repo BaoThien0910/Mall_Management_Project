@@ -57,7 +57,7 @@ export default function MeterReadingPage() {
       render: (_, record) => pick(record, ["ma_mat_bang", "ma_mb", "MAMB"]),
     },
     {
-      title: "Kỳ",
+      title: "Tháng",
       render: (_, record) => `${pick(record, ["thang", "THANG"])} / ${pick(record, ["nam", "NAM"])}`,
     },
     {
