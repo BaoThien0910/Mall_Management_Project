@@ -49,7 +49,6 @@ export default function DashboardPage() {
         title={isTenant ? "Cổng khách thuê" : `Chào buổi sáng, ${ROLE_LABEL[role] || "Người dùng"}`}
         subtitle={isTenant ? "Theo dõi hợp đồng, công nợ và yêu cầu hỗ trợ của bạn." : "Tình hình hoạt động trung tâm hôm nay."}
         breadcrumb={[isTenant ? "Trang chủ" : "Quản trị"]}
-        extra={<Button>7 ngày qua</Button>}
       />
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} xl={6}><StatCard label={isTenant ? "Số kỳ công nợ" : "Tổng doanh thu"} value={isTenant ? "2" : "12,4 tỷ đ"} hint={isTenant ? "Theo dữ liệu thanh toán" : "↑ +8,2% so với kỳ trước"} /></Col>
