@@ -75,6 +75,7 @@ export default function AppShell() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [passwordForm] = Form.useForm();
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
   const handleChangePassword = async (values) => {
     setSubmitting(true);
@@ -203,6 +204,14 @@ export default function AppShell() {
     };
   }, [role, location.pathname]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const allowedMenu = useMemo(
     () => menuItems.filter((item) => item.allowedRoles.includes(role)),
     [role],
@@ -269,7 +278,24 @@ export default function AppShell() {
         <Header className="app-header">
           <Space size={12} className="header-left">
             {isMobile ? <Button icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} /> : null}
-            <Input className="header-search" prefix={<SearchOutlined />} placeholder="Tìm kiếm..." />
+            <Space size={8} className="header-datetime" style={{ display: "flex", alignItems: "center" }}>
+              <Text style={{ color: "#1677ff", fontWeight: 500 }}>
+                {currentDateTime.toLocaleString("vi-VN", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                })}
+              </Text>
+              <Divider type="vertical" style={{ margin: "0 4px", borderColor: "#d9d9d9" }} />
+              <Text style={{ color: "#1677ff", fontWeight: 500 }}>
+                {currentDateTime.toLocaleString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: false,
+                })}
+              </Text>
+            </Space>
           </Space>
 
           <Space size={18}>
