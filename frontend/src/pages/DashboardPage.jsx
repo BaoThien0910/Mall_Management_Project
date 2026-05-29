@@ -1,10 +1,12 @@
-import { Button, Card, Col, Row, Space, Table, Tag, Typography } from "antd";
+import { useEffect, useState } from "react";
+import { Card, Col, Row, Table, Tag, Typography, Spin, message } from "antd";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/common/PageHeader";
 import StatCard from "../components/common/StatCard";
 import { ROLE, ROLE_LABEL } from "../constants/roles";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../hooks/useAuth";
+import { dashboardService } from "../services/dashboardService";
 
 const { Text } = Typography;
 
@@ -34,14 +36,52 @@ const actorActions = {
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
+  
+  const [dashboardData, setDashboardData] = useState({
+    summary_cards: [],
+    menu_badges: {}
+  });
+  const [loading, setLoading] = useState(true);
+
   const actions = actorActions[role] || [];
   const isTenant = role === ROLE.KHACH_THUE;
+
+  // Gọi API thông qua axios
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const response = await dashboardService.getMyDashboard();
+        const data = response.summary_cards ? response : (response.data?.data || response.data);
+        
+        console.log("DEBUG API DASHBOARD:", data); //debug
+
+        if (data) {
+          setDashboardData(data);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu dashboard:", error);
+        message.error("Không thể tải dữ liệu thống kê.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   const columns = [
     { title: isTenant ? "Mục cần xử lý" : "Nghiệp vụ", dataIndex: "name" },
     { title: "Trạng thái", dataIndex: "status", render: (v) => <Tag color="processing">{v}</Tag> },
     { title: "Thao tác", dataIndex: "to", render: (to) => <Link to={to}>Truy cập</Link> },
   ];
+  
   const rows = actions.map(([name, to], idx) => ({ id: idx, name, to, status: "Sẵn sàng" }));
+
+  const checkDangerCard = (key) => {
+    const dangerKeys = ['disabled_accounts', 'pending_incidents', 'import_errors', 'unpaid_debts', 'open_incidents'];
+    return dangerKeys.includes(key);
+  };
 
   return (
     <>
@@ -50,13 +90,32 @@ export default function DashboardPage() {
         subtitle={isTenant ? "Theo dõi hợp đồng, công nợ và yêu cầu hỗ trợ của bạn." : "Tình hình hoạt động trung tâm hôm nay."}
         breadcrumb={[isTenant ? "Trang chủ" : "Quản trị"]}
       />
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12} xl={6}><StatCard label={isTenant ? "Số kỳ công nợ" : "Tổng doanh thu"} value={isTenant ? "2" : "12,4 tỷ đ"} hint={isTenant ? "Theo dữ liệu thanh toán" : "↑ +8,2% so với kỳ trước"} /></Col>
-        <Col xs={24} md={12} xl={6}><StatCard label={isTenant ? "Tổng còn phải trả" : "Tỷ lệ lấp đầy"} value={isTenant ? "0 đ" : "94%"} hint="Ổn định" /></Col>
-        <Col xs={24} md={12} xl={6}><StatCard label={isTenant ? "Kỳ quá hạn" : "Lượt khách"} value={isTenant ? "0" : "45.210"} hint="↑ +2,4% so với kỳ trước" /></Col>
-        <Col xs={24} md={12} xl={6}><StatCard label="Yêu cầu bảo trì" value="12" hint="Đang chờ xử lý" danger /></Col>
-      </Row>
-      <Card className="section-card" title={isTenant ? "Chức năng của khách thuê" : "Chức năng theo vai trò"}>
+      <Spin spinning={loading}>
+        <Row gutter={[16, 16]}>
+          {dashboardData.summary_cards.map((card, index) => (
+            <Col xs={24} md={12} xl={6} key={card.key || index}>
+              <StatCard 
+                label={card.title} 
+                value={
+                  card.key.includes('revenue') || card.key === 'total_payable' 
+                    ? `${Number(card.value).toLocaleString('vi-VN')} đ` 
+                    : card.value
+                } 
+                hint={card.description || card.status || "Cập nhật hôm nay"} 
+                danger={checkDangerCard(card.key)}
+              />
+            </Col>
+          ))}
+
+          {!loading && dashboardData.summary_cards.length === 0 && (
+             <Col span={24}>
+                <Text type="secondary">Chưa có dữ liệu thống kê cho vai trò của bạn.</Text>
+             </Col>
+          )}
+        </Row>
+      </Spin>
+
+      <Card className="section-card" style={{ marginTop: 24 }} title={isTenant ? "Chức năng của khách thuê" : "Chức năng theo vai trò"}>
         <Table columns={columns} dataSource={rows} rowKey="id" pagination={false} scroll={{ x: 720 }} />
       </Card>
     </>
