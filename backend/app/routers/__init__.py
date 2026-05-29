@@ -16,7 +16,7 @@ from . import taikhoan
 from . import thanh_toan
 from . import thongbao
 from . import yc_thuethem
-
+from . import lookup
 __all__ = [
     "auth",
     "taikhoan",
@@ -35,4 +35,5 @@ __all__ = [
     "thongbao",
     "nhatky",
     "dashboard",
+    "lookup",
 ]
