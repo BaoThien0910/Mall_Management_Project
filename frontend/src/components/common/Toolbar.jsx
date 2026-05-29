@@ -13,7 +13,7 @@ export default function Toolbar({ keyword, onKeywordChange, status, onStatusChan
             value={keyword}
             onChange={(event) => onKeywordChange?.(event.target.value)}
             onPressEnter={onSearch}
-            style={{ width: 280 }}
+            style={{ width: 340 }}
           />
         ) : null}
         {statusOptions.length ? (
@@ -28,7 +28,9 @@ export default function Toolbar({ keyword, onKeywordChange, status, onStatusChan
         ) : null}
         {children}
         <Button icon={<ReloadOutlined />} onClick={onReload}>Tải lại</Button>
-        <Button type="primary" icon={<FilterOutlined />} onClick={onSearch}>Lọc</Button>
+        {onSearch ? (
+          <Button type="primary" icon={<FilterOutlined />} onClick={onSearch}>Lọc</Button>
+        ) : null}
       </Space>
     </Card>
   );

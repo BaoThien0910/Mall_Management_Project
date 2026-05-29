@@ -49,6 +49,21 @@ def list_contracts(
         conditions.append(HopDong.ngay_bat_dau >= filters.ngay_bat_dau_tu)
     if filters.ngay_bat_dau_den:
         conditions.append(HopDong.ngay_bat_dau <= filters.ngay_bat_dau_den)
+    if filters.ngay_ket_thuc_tu:
+        conditions.append(HopDong.ngay_ket_thuc >= filters.ngay_ket_thuc_tu)
+    if filters.ngay_ket_thuc_den:
+        conditions.append(HopDong.ngay_ket_thuc <= filters.ngay_ket_thuc_den)
+    if filters.gia_thue_tu is not None:
+        conditions.append(HopDong.gia_thue_thang >= filters.gia_thue_tu)
+    if filters.gia_thue_den is not None:
+        conditions.append(HopDong.gia_thue_thang <= filters.gia_thue_den)
+    if filters.keyword:
+        search_val = f"%{filters.keyword}%"
+        conditions.append(
+            (HopDong.ma_hop_dong.ilike(search_val)) |
+            (HopDong.ma_khach_thue.ilike(search_val)) |
+            (HopDong.ma_mat_bang.ilike(search_val))
+        )
 
     stmt = select(HopDong)
     count_stmt = select(func.count()).select_from(HopDong)

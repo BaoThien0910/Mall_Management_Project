@@ -476,7 +476,7 @@ export default function PremiseListPage() {
           <Input
             allowClear
             prefix={<SearchOutlined />}
-            placeholder="Tìm kiếm mã mặt bằng..."
+            placeholder="Tìm kiếm Mã mặt bằng"
             value={keyword}
             onChange={(e) => {
               const val = e.target.value;
@@ -497,22 +497,22 @@ export default function PremiseListPage() {
             overlayStyle={{ zIndex: 1050 }}
           >
             <Button
+              type="primary"
               icon={<FilterOutlined />}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 height: '38px',
                 borderRadius: '8px',
-                border: '1px solid #d9d9d9',
               }}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center' }}>Bộ lọc</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>Lọc</span>
               {activeFiltersCount > 0 && (
                 <span
                   style={{
                     marginLeft: 8,
-                    backgroundColor: '#1677ff',
-                    color: '#fff',
+                    backgroundColor: '#fff',
+                    color: '#1677ff',
                     borderRadius: '50%',
                     width: '20px',
                     height: '20px',
