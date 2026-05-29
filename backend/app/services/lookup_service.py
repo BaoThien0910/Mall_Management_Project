@@ -2,12 +2,12 @@
 
 from typing import Any, Dict, List
 
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.orm import Session
 
 from app.constants.roles import RoleCode
 from app.constants.statuses import HopDongStatus
-from app.models import HopDong, MatBang, NhanVien
+from app.models import HopDong, MatBang, NhanVien, TaiKhoan, KhachThue
 
 
 def _enum_value(value: Any) -> Any:
@@ -47,6 +47,17 @@ def _employee_to_option(employee: NhanVien) -> Dict[str, Any]:
         "label": f"{employee.ma_nhan_vien} - {employee.ho_ten}",
     }
 
+def _tenant_to_option(tenant: KhachThue) -> Dict[str, Any]:
+    return {
+        "ma_khach_thue": tenant.ma_khach_thue,
+        "ten_khach": tenant.ten_khach,
+        "cccd_mst": tenant.cccd_mst,
+        "so_dien_thoai": tenant.so_dien_thoai,
+        "email": tenant.email,
+        "dia_chi": tenant.dia_chi,
+        "trang_thai": tenant.trang_thai,
+        "label": f"{tenant.ma_khach_thue} - {tenant.ten_khach}",
+    }
 
 def list_maintenance_premises(
     db: Session,
@@ -93,3 +104,43 @@ def list_vhbt_employees(
 
     items = db.execute(stmt).scalars().all()
     return {"items": [_employee_to_option(item) for item in items]}
+
+def list_account_employees(
+    db: Session,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Danh sách nhân viên đang làm và chưa có tài khoản.
+    Dùng cho form tạo tài khoản của Quản trị viên.
+    """
+    stmt = (
+        select(NhanVien)
+        .where(
+            NhanVien.trang_thai == "Đang làm",
+            ~exists().where(TaiKhoan.ma_nhan_vien == NhanVien.ma_nhan_vien),
+        )
+        .order_by(NhanVien.ma_nhan_vien.asc())
+    )
+
+    items = db.execute(stmt).scalars().all()
+    return {"items": [_employee_to_option(item) for item in items]}
+
+
+def list_account_tenants(
+    db: Session,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Danh sách khách thuê đang thuê, đã có hợp đồng và chưa có tài khoản.
+    Dùng cho form tạo tài khoản của Quản trị viên.
+    """
+    stmt = (
+        select(KhachThue)
+        .where(
+            KhachThue.trang_thai == "Đang thuê",
+            ~exists().where(TaiKhoan.ma_khach_thue == KhachThue.ma_khach_thue),
+            exists().where(HopDong.ma_khach_thue == KhachThue.ma_khach_thue),
+        )
+        .order_by(KhachThue.ma_khach_thue.asc())
+    )
+
+    items = db.execute(stmt).scalars().all()
+    return {"items": [_tenant_to_option(item) for item in items]}

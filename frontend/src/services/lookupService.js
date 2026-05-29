@@ -8,4 +8,11 @@ export const lookupService = {
   vhbtEmployees() {
     return apiClient.get("/danh-muc/nhan-vien-vhbt");
   },
+  accountEmployees() {
+  return apiClient.get("/danh-muc/nhan-vien-tao-tai-khoan");
+},
+
+accountTenants() {
+  return apiClient.get("/danh-muc/khach-thue-tao-tai-khoan");
+},
 };
