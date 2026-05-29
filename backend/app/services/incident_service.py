@@ -2,7 +2,7 @@
 import uuid
 from typing import Any, Dict, List
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, or_
 from sqlalchemy.orm import Session
 
 from app.constants.roles import RoleCode
@@ -96,9 +96,29 @@ def list_incidents(
     if filters.ma_khach_thue:
         conditions.append(SuCoBaoTri.ma_khach_thue == filters.ma_khach_thue)
     if filters.trang_thai:
-        conditions.append(SuCoBaoTri.trang_thai == _enum_value(filters.trang_thai))
+        status_list = [s.strip() for s in filters.trang_thai.split(",") if s.strip()]
+        if status_list:
+            conditions.append(SuCoBaoTri.trang_thai.in_(status_list))
     if filters.ma_nhan_vien_xu_ly:
         conditions.append(SuCoBaoTri.ma_nhan_vien_xu_ly == filters.ma_nhan_vien_xu_ly)
+
+    from datetime import time, datetime
+    if filters.tu_ngay:
+        conditions.append(SuCoBaoTri.ngay_gui >= filters.tu_ngay)
+    if filters.den_ngay:
+        if filters.den_ngay.time() == time.min:
+            den_ngay_dt = datetime.combine(filters.den_ngay.date(), time.max)
+            conditions.append(SuCoBaoTri.ngay_gui <= den_ngay_dt)
+        else:
+            conditions.append(SuCoBaoTri.ngay_gui <= filters.den_ngay)
+
+    if filters.keyword:
+        conditions.append(
+            or_(
+                SuCoBaoTri.ma_mat_bang.ilike(f"%{filters.keyword}%"),
+                SuCoBaoTri.ma_khach_thue.ilike(f"%{filters.keyword}%"),
+            )
+        )
 
     stmt = select(SuCoBaoTri)
     count_stmt = select(func.count()).select_from(SuCoBaoTri)
@@ -108,8 +128,16 @@ def list_incidents(
         count_stmt = count_stmt.where(clause)
 
     total = db.execute(count_stmt).scalar_one()
+
+    # Determine order clause
+    order_clause = SuCoBaoTri.ngay_gui.desc()
+    if filters.sort_by == "trang_thai":
+        order_clause = SuCoBaoTri.trang_thai.asc() if filters.order == "asc" else SuCoBaoTri.trang_thai.desc()
+    elif filters.sort_by == "ngay_gui":
+        order_clause = SuCoBaoTri.ngay_gui.asc() if filters.order == "asc" else SuCoBaoTri.ngay_gui.desc()
+
     items = db.execute(
-        stmt.order_by(SuCoBaoTri.ngay_gui.desc())
+        stmt.order_by(order_clause)
         .offset(calculate_offset(page, page_size))
         .limit(page_size)
     ).scalars().all()

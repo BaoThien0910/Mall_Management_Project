@@ -1,21 +1,29 @@
 import {
   CheckOutlined,
+  FilterOutlined,
   PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
   ToolOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
 import {
   Button,
+  Card,
+  Checkbox,
+  DatePicker,
   Descriptions,
   Form,
   Input,
   InputNumber,
   Modal,
+  Popover,
   Select,
   Space,
   message,
 } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
@@ -35,7 +43,6 @@ const REVIEW_OPTIONS = [
 
 const INCIDENT_RESULT_OPTIONS = [
   { value: "Đã xử lý xong", label: "Đã xử lý xong" },
-  { value: "Đã sửa chữa / thay thế xong", label: "Đã sửa chữa / thay thế xong" },
   { value: "Không phát hiện lỗi", label: "Không phát hiện lỗi" },
   {
     value: "Không thể xử lý do ngoài phạm vi bảo trì",
@@ -73,14 +80,111 @@ export default function IncidentListPage() {
   const [selectedPremise, setSelectedPremise] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
+  const [keyword, setKeyword] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [tuNgay, setTuNgay] = useState("");
+  const [denNgay, setDenNgay] = useState("");
+  const [trangThaiList, setTrangThaiList] = useState([]);
+
+  const [tempTuNgay, setTempTuNgay] = useState("");
+  const [tempDenNgay, setTempDenNgay] = useState("");
+  const [tempTrangThaiList, setTempTrangThaiList] = useState([]);
+
+  const timerRef = useRef(null);
+
   const [form] = Form.useForm();
   const reviewResult = Form.useWatch("ket_qua", form);
 
   const fetcher = useCallback((params) => incidentService.list(params), []);
-  const { items, loading, reload } = useCrudList(fetcher, {
+  const { items, loading, reload, setParams } = useCrudList(fetcher, {
     page: 1,
     page_size: 20,
   });
+
+  const applyFilters = (updates, immediate = false) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    const run = () => {
+      const nextFilters = {
+        keyword: keyword || undefined,
+        tu_ngay: tuNgay ? `${tuNgay}T00:00:00` : undefined,
+        den_ngay: denNgay ? `${denNgay}T23:59:59` : undefined,
+        trang_thai: trangThaiList.length ? trangThaiList.join(",") : undefined,
+        ...updates
+      };
+
+      const cleanParams = {};
+      Object.keys(nextFilters).forEach(key => {
+        if (nextFilters[key] !== undefined && nextFilters[key] !== null && nextFilters[key] !== "") {
+          cleanParams[key] = nextFilters[key];
+        }
+      });
+
+      setParams({
+        ...cleanParams,
+        page: 1,
+        page_size: 20,
+      });
+    };
+
+    if (immediate) {
+      run();
+    } else {
+      timerRef.current = setTimeout(run, 500);
+    }
+  };
+
+  const handleKeywordSearch = () => {
+    applyFilters({ keyword: keyword || undefined }, true);
+  };
+
+  const handleOpenPopover = (visible) => {
+    if (visible) {
+      setTempTuNgay(tuNgay);
+      setTempDenNgay(denNgay);
+      setTempTrangThaiList(trangThaiList);
+    }
+    setPopoverOpen(visible);
+  };
+
+  const handleApply = () => {
+    setTuNgay(tempTuNgay);
+    setDenNgay(tempDenNgay);
+    setTrangThaiList(tempTrangThaiList);
+    setPopoverOpen(false);
+
+    applyFilters({
+      tu_ngay: tempTuNgay ? `${tempTuNgay}T00:00:00` : undefined,
+      den_ngay: tempDenNgay ? `${tempDenNgay}T23:59:59` : undefined,
+      trang_thai: tempTrangThaiList.length ? tempTrangThaiList.join(",") : undefined,
+    }, true);
+  };
+
+  const handleCancel = () => {
+    setPopoverOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempTuNgay("");
+    setTempDenNgay("");
+    setTempTrangThaiList([]);
+    setTuNgay("");
+    setDenNgay("");
+    setTrangThaiList([]);
+    setPopoverOpen(false);
+
+    applyFilters({
+      tu_ngay: undefined,
+      den_ngay: undefined,
+      trang_thai: undefined,
+    }, true);
+  };
+
+  const handleReload = () => {
+    reload();
+  };
 
   const currentEmployeeId = pick(
     user,
@@ -346,7 +450,6 @@ export default function IncidentListPage() {
     },
     {
       title: "Thao tác",
-      align: "right",
       render: (_, record) => {
         const status = pick(record, ["trang_thai", "TRANGTHAI"]);
 
@@ -402,6 +505,75 @@ export default function IncidentListPage() {
     cost: "Nhập chi phí",
   }[action];
 
+  const activeFiltersCount = (tuNgay ? 1 : 0) + (denNgay ? 1 : 0) + (trangThaiList.length ? 1 : 0);
+
+  const filterContent = (
+    <div style={{ padding: "8px", width: 440 }}>
+      {/* Ngày gửi */}
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Ngày gửi</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ color: "#555" }}>From:</span>
+          <DatePicker
+            value={tempTuNgay ? dayjs(tempTuNgay) : null}
+            onChange={(date) => setTempTuNgay(date ? dayjs(date).format("YYYY-MM-DD") : "")}
+            format="DD/MM/YYYY"
+            placeholder="Từ ngày"
+            style={{ width: "100%" }}
+            allowClear={false}
+          />
+          <span style={{ color: "#bfbfbf" }}>-</span>
+          <span style={{ color: "#555" }}>To:</span>
+          <DatePicker
+            value={tempDenNgay ? dayjs(tempDenNgay) : null}
+            onChange={(date) => setTempDenNgay(date ? dayjs(date).format("YYYY-MM-DD") : "")}
+            format="DD/MM/YYYY"
+            placeholder="Đến ngày"
+            style={{ width: "100%" }}
+            allowClear={false}
+          />
+        </div>
+      </div>
+
+      {/* Trạng thái */}
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Trạng thái</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+          {["Chờ duyệt", "Đã duyệt", "Từ chối", "Đang xử lý", "Hoàn thành"].map((status) => {
+            const checked = tempTrangThaiList.includes(status);
+            return (
+              <Checkbox
+                key={status}
+                checked={checked}
+                onChange={(e) => {
+                  const next = e.target.checked
+                    ? [...tempTrangThaiList, status]
+                    : tempTrangThaiList.filter((s) => s !== status);
+                  setTempTrangThaiList(next);
+                }}
+              >
+                {status}
+              </Checkbox>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button type="primary" danger onClick={handleClearFilters}>
+          Xóa bộ lọc
+        </Button>
+        <Space>
+          <Button onClick={handleCancel}>Hủy</Button>
+          <Button type="primary" onClick={handleApply}>
+            Áp dụng
+          </Button>
+        </Space>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <PageHeader
@@ -411,6 +583,76 @@ export default function IncidentListPage() {
         actionIcon={<PlusOutlined />}
         onAction={isTenant ? openCreate : undefined}
       />
+
+      <Card
+        className="toolbar-card"
+        bordered={false}
+        style={{ marginBottom: "16px" }}
+        styles={{ body: { padding: "16px" } }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Input
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder="Tìm kiếm Mã mặt bằng, Khách thuê"
+            value={keyword}
+            onChange={(e) => {
+              const val = e.target.value;
+              setKeyword(val);
+              applyFilters({ keyword: val || undefined }, !val);
+            }}
+            onPressEnter={handleKeywordSearch}
+            style={{ width: 340 }}
+          />
+
+          <Popover
+            content={filterContent}
+            title="Bộ lọc"
+            trigger="click"
+            open={popoverOpen}
+            onOpenChange={handleOpenPopover}
+            placement="bottomLeft"
+            overlayStyle={{ zIndex: 1050 }}
+          >
+            <Button
+              type="primary"
+              icon={<FilterOutlined />}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                height: "38px",
+                borderRadius: "8px",
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center" }}>Lọc</span>
+              {activeFiltersCount > 0 && (
+                <span
+                  style={{
+                    marginLeft: 8,
+                    backgroundColor: "#fff",
+                    color: "#1677ff",
+                    borderRadius: "50%",
+                    width: "20px",
+                    height: "20px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: "1",
+                  }}
+                >
+                  {activeFiltersCount}
+                </span>
+              )}
+            </Button>
+          </Popover>
+
+          <Button icon={<ReloadOutlined />} onClick={handleReload}>
+            Tải lại
+          </Button>
+        </div>
+      </Card>
 
       <ResponsiveTable
         rowKey={(record) => pickId(record, ["ma_su_co", "MASUCO"])}

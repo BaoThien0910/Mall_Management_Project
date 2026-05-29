@@ -54,7 +54,8 @@ function getUserName(user, role) {
   );
 }
 
-function getMenuBadgeValue(menuBadges, badgeKey) {
+function getMenuBadgeValue(menuBadges, badgeKey, role) {
+  if (role === ROLE.KHACH_THUE) return 0;
   if (!badgeKey || !menuBadges) return 0;
 
   const numberValue = Number(menuBadges[badgeKey]);
@@ -237,7 +238,7 @@ export default function AppShell() {
         mode="inline"
         selectedKeys={[selectedKey]}
         items={allowedMenu.map(({ key, label, icon, badgeKey }) => {
-          const badgeValue = getMenuBadgeValue(menuBadges, badgeKey);
+          const badgeValue = getMenuBadgeValue(menuBadges, badgeKey, role);
 
           return {
             key,

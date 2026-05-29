@@ -92,7 +92,12 @@ class SuCoBaoTriResponse(BaseModel):
 class SuCoBaoTriFilter(BaseModel):
     ma_mat_bang: Optional[str] = Field(default=None, max_length=20)
     ma_khach_thue: Optional[str] = Field(default=None, max_length=20)
-    trang_thai: Optional[SuCoBaoTriStatus] = None
+    trang_thai: Optional[str] = None
     ma_nhan_vien_xu_ly: Optional[str] = Field(default=None, max_length=20)
+    keyword: Optional[str] = None
+    tu_ngay: Optional[datetime] = None
+    den_ngay: Optional[datetime] = None
+    sort_by: Optional[str] = None
+    order: Optional[str] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)
