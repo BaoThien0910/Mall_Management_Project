@@ -1,19 +1,21 @@
 import { Button, Card, Input, Select, Space } from "antd";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { ReloadOutlined, SearchOutlined, FilterOutlined } from "@ant-design/icons";
 
-export default function Toolbar({ keyword, onKeywordChange, status, onStatusChange, statusOptions = [], onSearch, onReload, children }) {
+export default function Toolbar({ keyword, onKeywordChange, status, onStatusChange, statusOptions = [], onSearch, onReload, placeholder = "Tìm kiếm...", children }) {
   return (
     <Card className="toolbar-card" bordered={false}>
       <Space wrap className="toolbar-space">
-        <Input
-          allowClear
-          prefix={<SearchOutlined />}
-          placeholder="Tìm kiếm..."
-          value={keyword}
-          onChange={(event) => onKeywordChange?.(event.target.value)}
-          onPressEnter={onSearch}
-          style={{ width: 280 }}
-        />
+        {onKeywordChange ? (
+          <Input
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder={placeholder}
+            value={keyword}
+            onChange={(event) => onKeywordChange?.(event.target.value)}
+            onPressEnter={onSearch}
+            style={{ width: 280 }}
+          />
+        ) : null}
         {statusOptions.length ? (
           <Select
             allowClear
@@ -26,7 +28,7 @@ export default function Toolbar({ keyword, onKeywordChange, status, onStatusChan
         ) : null}
         {children}
         <Button icon={<ReloadOutlined />} onClick={onReload}>Tải lại</Button>
-        <Button type="primary" icon={<SearchOutlined />} onClick={onSearch}>Lọc</Button>
+        <Button type="primary" icon={<FilterOutlined />} onClick={onSearch}>Lọc</Button>
       </Space>
     </Card>
   );

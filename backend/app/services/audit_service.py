@@ -1,4 +1,5 @@
 # File: app/services/audit_service.py
+import logging
 import uuid
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +11,8 @@ from app.models import NhatKy
 from app.schemas.nhatky import NhatKyFilter
 from app.utils.datetime_helper import current_datetime
 from app.utils.pagination import calculate_offset, calculate_total_pages, normalize_pagination
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_code(prefix: str) -> str:
@@ -55,22 +58,44 @@ def list_audit_logs(
     current_user: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Liệt kê nhật ký thao tác có lọc và phân trang."""
+    # Tự động xóa các bản ghi cũ hơn 90 ngày
+    try:
+        from datetime import timedelta
+        from sqlalchemy import delete
+        ninety_days_ago = current_datetime() - timedelta(days=90)
+        db.execute(delete(NhatKy).where(NhatKy.thoi_gian < ninety_days_ago))
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Không thể tự động xóa nhật ký cũ: {e}")
+
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = []
 
+    from app.models import TaiKhoan
+
     if filters.ma_tai_khoan:
-        conditions.append(NhatKy.ma_tai_khoan == filters.ma_tai_khoan)
+        search_val = f"%{filters.ma_tai_khoan}%"
+        conditions.append(
+            (NhatKy.ma_tai_khoan.ilike(search_val)) |
+            (TaiKhoan.ten_dang_nhap.ilike(search_val))
+        )
     if filters.hanh_dong:
         conditions.append(NhatKy.hanh_dong == _enum_value(filters.hanh_dong))
     if filters.doi_tuong:
         conditions.append(NhatKy.doi_tuong.ilike(f"%{filters.doi_tuong}%"))
+    
+    from datetime import time, datetime
     if filters.tu_ngay:
         conditions.append(NhatKy.thoi_gian >= filters.tu_ngay)
     if filters.den_ngay:
-        conditions.append(NhatKy.thoi_gian <= filters.den_ngay)
+        if filters.den_ngay.time() == time.min:
+            den_ngay_dt = datetime.combine(filters.den_ngay.date(), time.max)
+            conditions.append(NhatKy.thoi_gian <= den_ngay_dt)
+        else:
+            conditions.append(NhatKy.thoi_gian <= filters.den_ngay)
 
-    stmt = select(NhatKy)
-    count_stmt = select(func.count()).select_from(NhatKy)
+    stmt = select(NhatKy).join(TaiKhoan, NhatKy.ma_tai_khoan == TaiKhoan.ma_tai_khoan)
+    count_stmt = select(func.count()).select_from(NhatKy).join(TaiKhoan, NhatKy.ma_tai_khoan == TaiKhoan.ma_tai_khoan)
     if conditions:
         clause = and_(*conditions)
         stmt = stmt.where(clause)
