@@ -65,7 +65,6 @@ export default function MyDebtListPage() {
     },
     {
       title: "Thao tác",
-      align: "right",
       render: (_, r) =>
         pick(r, ["trang_thai", "TRANGTHAI"]) !== "Đã thanh toán" ? (
           <Button
