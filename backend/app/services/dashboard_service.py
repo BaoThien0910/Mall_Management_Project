@@ -90,7 +90,7 @@ def get_my_dashboard(db: Session, current_user: Any) -> Dict[str, Any]:
             "summary_cards": [
                 _card("pending_rent_requests", "Yêu cầu thuê thêm", pending_rent_requests, "Chờ duyệt"),
                 _card("pending_incidents", "Sự cố bảo trì", pending_incidents, "Chờ duyệt"),
-                _card("published_notifications", "Thông báo đang ban hành", published_notifications),
+                _card("published_notifications", "Thông báo đã ban hành", published_notifications),
             ],
             "menu_badges": {
                 "rent_requests": pending_rent_requests,
@@ -118,14 +118,6 @@ def get_my_dashboard(db: Session, current_user: Any) -> Dict[str, Any]:
             _card("unpaid_debts", "Công nợ chưa thanh toán", unpaid_debts),
             _card("import_errors", "Dòng import lỗi", import_errors),
         ]
-        if role == "TP_KDTC":
-            draft_reports = _count(
-                db,
-                select(func.count()).select_from(BaoCaoTaiChinh).where(
-                    BaoCaoTaiChinh.trang_thai == "Bản nháp"
-                ),
-            )
-            cards.append(_card("draft_reports", "Báo cáo bản nháp", draft_reports))
         return {
             "role": role,
             "summary_cards": cards,
