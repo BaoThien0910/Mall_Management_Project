@@ -103,6 +103,7 @@ export default function RentRequestPage() {
     },
     {
       title: "Thao tác",
+      align: "right",
       render: (_, r) =>
         !isTenant ? (
           <Space>

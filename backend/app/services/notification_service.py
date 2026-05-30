@@ -101,23 +101,11 @@ def list_announcements(
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = [_visibility_clause(current_user)]
     if filters.loai_thong_bao:
-        types = [t.strip() for t in filters.loai_thong_bao.split(",") if t.strip()]
-        if types:
-            conditions.append(ThongBao.loai_thong_bao.in_(types))
+        conditions.append(ThongBao.loai_thong_bao == _enum_value(filters.loai_thong_bao))
     if filters.doi_tuong_nhan:
-        recipients = [r.strip() for r in filters.doi_tuong_nhan.split(",") if r.strip()]
-        if recipients:
-            conditions.append(ThongBao.doi_tuong_nhan.in_(recipients))
+        conditions.append(ThongBao.doi_tuong_nhan == _enum_value(filters.doi_tuong_nhan))
     if filters.trang_thai:
-        statuses = [s.strip() for s in filters.trang_thai.split(",") if s.strip()]
-        if statuses:
-            conditions.append(ThongBao.trang_thai.in_(statuses))
-    if filters.keyword:
-        conditions.append(ThongBao.tieu_de.ilike(f"%{filters.keyword}%"))
-    if filters.tu_ngay:
-        conditions.append(ThongBao.ngay_ban_hanh >= filters.tu_ngay)
-    if filters.den_ngay:
-        conditions.append(ThongBao.ngay_ban_hanh <= filters.den_ngay)
+        conditions.append(ThongBao.trang_thai == _enum_value(filters.trang_thai))
 
     clause = and_(*conditions)
     total = db.execute(
