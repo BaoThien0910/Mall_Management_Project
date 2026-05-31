@@ -1,4 +1,4 @@
-import { CheckOutlined, CloseOutlined, PlusOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined, PlusOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Button,
   Descriptions,
@@ -8,13 +8,18 @@ import {
   Select,
   Space,
   message,
+  Popover,
+  DatePicker,
 } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import dayjs from "dayjs";
 
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
 import StatusTag from "../../components/common/StatusTag";
+import Toolbar from "../../components/common/Toolbar";
 import { ROLE } from "../../constants/roles";
+import { YEU_CAU_THUE_THEM_STATUS } from "../../constants/statuses";
 import { useAuth } from "../../hooks/useAuth";
 import { useCrudList } from "../../hooks/useCrudList";
 import { rentRequestService } from "../../services/rentRequestService";
@@ -35,15 +40,182 @@ export default function RentRequestPage() {
   const [vacantPremises, setVacantPremises] = useState([]);
   const [selectedPremise, setSelectedPremise] = useState(null);
 
+  // Search and Filter states
+  const [keyword, setKeyword] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const timerRef = useRef(null);
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    trang_thai: undefined,
+    ngay_gui_tu: undefined,
+    ngay_gui_den: undefined,
+  });
+
+  const [tempNgayGuiTu, setTempNgayGuiTu] = useState("");
+  const [tempNgayGuiDen, setTempNgayGuiDen] = useState("");
+  const [tempTrangThai, setTempTrangThai] = useState(undefined);
+
   const fetcher = useCallback(
     (params) => (isTenant ? rentRequestService.myRequests(params) : rentRequestService.list(params)),
     [isTenant],
   );
 
-  const { items, loading, reload } = useCrudList(fetcher, {
+  const { items, loading, reload, setParams } = useCrudList(fetcher, {
     page: 1,
     page_size: 20,
   });
+
+  const applySearch = (val) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      const activeFilters = {};
+      Object.keys(appliedFilters).forEach((key) => {
+        if (appliedFilters[key] !== undefined && appliedFilters[key] !== null && appliedFilters[key] !== "") {
+          activeFilters[key] = appliedFilters[key];
+        }
+      });
+      setParams({
+        keyword: val || undefined,
+        ...activeFilters,
+        page: 1,
+        page_size: 20,
+      });
+    }, 500);
+  };
+
+  const handleApply = () => {
+    const nextFilters = {
+      trang_thai: tempTrangThai,
+      ngay_gui_tu: tempNgayGuiTu,
+      ngay_gui_den: tempNgayGuiDen,
+    };
+    setAppliedFilters(nextFilters);
+    setPopoverOpen(false);
+
+    const activeFilters = {};
+    Object.keys(nextFilters).forEach((key) => {
+      if (nextFilters[key] !== undefined && nextFilters[key] !== null && nextFilters[key] !== "") {
+        activeFilters[key] = nextFilters[key];
+      }
+    });
+
+    setParams({
+      keyword: keyword || undefined,
+      ...activeFilters,
+      page: 1,
+      page_size: 20,
+    });
+  };
+
+  const handleCancel = () => {
+    setTempNgayGuiTu(appliedFilters.ngay_gui_tu || "");
+    setTempNgayGuiDen(appliedFilters.ngay_gui_den || "");
+    setTempTrangThai(appliedFilters.trang_thai);
+    setPopoverOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempNgayGuiTu("");
+    setTempNgayGuiDen("");
+    setTempTrangThai(undefined);
+
+    setAppliedFilters({
+      trang_thai: undefined,
+      ngay_gui_tu: undefined,
+      ngay_gui_den: undefined,
+    });
+    setPopoverOpen(false);
+
+    setParams({
+      keyword: keyword || undefined,
+      page: 1,
+      page_size: 20,
+    });
+  };
+
+  const handleReload = () => {
+    setKeyword("");
+    const cleared = {
+      trang_thai: undefined,
+      ngay_gui_tu: undefined,
+      ngay_gui_den: undefined,
+    };
+    setAppliedFilters(cleared);
+    setTempNgayGuiTu("");
+    setTempNgayGuiDen("");
+    setTempTrangThai(undefined);
+    setParams({
+      page: 1,
+      page_size: 20,
+    });
+    reload();
+  };
+
+  const activeFiltersCount =
+    (appliedFilters.trang_thai ? 1 : 0) +
+    (appliedFilters.ngay_gui_tu ? 1 : 0) +
+    (appliedFilters.ngay_gui_den ? 1 : 0);
+
+  const filterContent = (
+    <div style={{ padding: "8px", width: 320 }}>
+      {/* Ngày gửi */}
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Ngày gửi</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#555", width: "40px" }}>Từ:</span>
+            <DatePicker
+              value={tempNgayGuiTu ? dayjs(tempNgayGuiTu) : null}
+              onChange={(date) => setTempNgayGuiTu(date ? dayjs(date).format("YYYY-MM-DD") : "")}
+              format="DD/MM/YYYY"
+              placeholder="Từ ngày"
+              style={{ width: "100%" }}
+              allowClear={false}
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#555", width: "40px" }}>Đến:</span>
+            <DatePicker
+              value={tempNgayGuiDen ? dayjs(tempNgayGuiDen) : null}
+              onChange={(date) => setTempNgayGuiDen(date ? dayjs(date).format("YYYY-MM-DD") : "")}
+              format="DD/MM/YYYY"
+              placeholder="Đến ngày"
+              style={{ width: "100%" }}
+              allowClear={false}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Trạng thái */}
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Trạng thái</div>
+        <Select
+          placeholder="Chọn trạng thái"
+          value={tempTrangThai || undefined}
+          onChange={setTempTrangThai}
+          style={{ width: "100%" }}
+          allowClear
+          options={YEU_CAU_THUE_THEM_STATUS.map((item) => ({ value: item, label: item }))}
+        />
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button type="primary" danger onClick={handleClearFilters}>
+          Xóa bộ lọc
+        </Button>
+        <Space>
+          <Button onClick={handleCancel}>Hủy</Button>
+          <Button type="primary" onClick={handleApply}>
+            Áp dụng
+          </Button>
+        </Space>
+      </div>
+    </div>
+  );
 
   const loadVacantPremises = useCallback(async () => {
     try {
@@ -183,6 +355,63 @@ export default function RentRequestPage() {
         actionIcon={<PlusOutlined />}
         onAction={isTenant ? openCreateModal : undefined}
       />
+
+      <Toolbar
+        keyword={keyword}
+        onKeywordChange={(val) => {
+          setKeyword(val);
+          applySearch(val);
+        }}
+        placeholder="Tìm kiếm mã Khách thuê, Mặt Bằng"
+        onReload={handleReload}
+      >
+        <Popover
+          content={filterContent}
+          trigger="click"
+          open={popoverOpen}
+          onOpenChange={(visible) => {
+            setPopoverOpen(visible);
+            if (!visible) {
+              handleCancel();
+            }
+          }}
+          placement="bottomLeft"
+          overlayStyle={{ zIndex: 1050 }}
+        >
+          <Button
+            type="primary"
+            icon={<FilterOutlined />}
+            style={{
+              minWidth: 100,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center" }}>Lọc</span>
+            {activeFiltersCount > 0 && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: "#fff",
+                  color: "#1677ff",
+                  borderRadius: "50%",
+                  width: "20px",
+                  height: "20px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: "1",
+                }}
+              >
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+        </Popover>
+      </Toolbar>
 
       <ResponsiveTable
         rowKey={(record) => pickId(record, ["ma_yeu_cau", "ma_yc", "MAYC"])}

@@ -594,7 +594,7 @@ export default function IncidentListPage() {
           <Input
             allowClear
             prefix={<SearchOutlined />}
-            placeholder="Tìm kiếm Mã mặt bằng, Khách thuê"
+            placeholder="Tìm kiếm mã Mặt bằng, Khách thuê"
             value={keyword}
             onChange={(e) => {
               const val = e.target.value;

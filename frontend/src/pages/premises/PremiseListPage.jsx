@@ -522,7 +522,7 @@ export default function PremiseListPage() {
           <Input
             allowClear
             prefix={<SearchOutlined />}
-            placeholder="Tìm kiếm Mã mặt bằng"
+            placeholder="Tìm kiếm mã Mặt bằng"
             value={keyword}
             onChange={(e) => {
               const val = e.target.value;

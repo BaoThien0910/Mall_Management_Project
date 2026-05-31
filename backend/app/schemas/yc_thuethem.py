@@ -58,6 +58,9 @@ class YeuCauThueThemResponse(BaseModel):
 class YeuCauThueThemFilter(BaseModel):
     ma_khach_thue: Optional[str] = Field(default=None, max_length=20)
     ma_mat_bang: Optional[str] = Field(default=None, max_length=20)
-    trang_thai: Optional[YeuCauThueThemStatus] = None
+    trang_thai: Optional[str] = None
+    keyword: Optional[str] = Field(default=None, max_length=100)
+    ngay_gui_tu: Optional[str] = Field(default=None)
+    ngay_gui_den: Optional[str] = Field(default=None)
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)

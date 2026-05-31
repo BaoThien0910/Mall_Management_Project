@@ -546,7 +546,7 @@ export default function ContractListPage() {
           setKeyword(val);
           applySearch(val);
         }}
-        placeholder="Tìm kiếm Mã HĐ, Khách thuê, Mặt bằng"
+        placeholder="Tìm kiếm mã HĐ, Khách thuê, Mặt bằng"
         onReload={handleReload}
       >
         <Popover
