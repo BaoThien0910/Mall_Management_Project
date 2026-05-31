@@ -151,13 +151,8 @@ export default function RentRequestPage() {
     {
       title: "Thao tác",
       align: "right",
-<<<<<<< HEAD
       render: (_, record) =>
         !isTenant && pick(record, ["trang_thai", "TRANGTHAI"]) === "Chờ duyệt" ? (
-=======
-      render: (_, r) =>
-        !isTenant ? (
->>>>>>> ccd8ad43c23d3f7ecc96e3e0a10d26061bcd2367
           <Space>
             <Button
               size="small"
