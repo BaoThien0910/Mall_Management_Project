@@ -1,6 +1,16 @@
 import { CheckOutlined, CloseOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Form, Input, Modal, Space, message, Select } from "antd";
-import { useCallback, useState, useEffect } from "react";
+import {
+  Button,
+  Descriptions,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  message,
+} from "antd";
+import { useCallback, useEffect, useState } from "react";
+
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
 import StatusTag from "../../components/common/StatusTag";
@@ -8,108 +18,155 @@ import { ROLE } from "../../constants/roles";
 import { useAuth } from "../../hooks/useAuth";
 import { useCrudList } from "../../hooks/useCrudList";
 import { rentRequestService } from "../../services/rentRequestService";
-import { premiseService } from "../../services/premiseService";
+import { lookupService } from "../../services/lookupService";
 import { showApiError } from "../../services/apiClient";
-import { pick, pickId, formatDate } from "../../utils/data";
+import { pick, pickId, formatDate, toArray } from "../../utils/data";
+
+function getPremiseId(record) {
+  return pick(record, ["ma_mat_bang", "ma_mb", "MAMB"], undefined);
+}
 
 export default function RentRequestPage() {
   const { role } = useAuth();
   const isTenant = role === ROLE.KHACH_THUE;
+
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  
   const [vacantPremises, setVacantPremises] = useState([]);
+  const [selectedPremise, setSelectedPremise] = useState(null);
 
   const fetcher = useCallback(
-    (p) => (isTenant ? rentRequestService.myRequests(p) : rentRequestService.list(p)),
-    [isTenant]
+    (params) => (isTenant ? rentRequestService.myRequests(params) : rentRequestService.list(params)),
+    [isTenant],
   );
+
   const { items, loading, reload } = useCrudList(fetcher, {
     page: 1,
     page_size: 20,
   });
 
-  // Load vacant premises when opening the request modal
+  const loadVacantPremises = useCallback(async () => {
+    try {
+      const data = await lookupService.vacantPremises();
+      setVacantPremises(toArray(data));
+    } catch (error) {
+      showApiError(error);
+    }
+  }, []);
+
   useEffect(() => {
     if (isTenant && open) {
-      const loadVacant = async () => {
-        try {
-          const res = await premiseService.list({ page: 1, page_size: 100 });
-          const list = res?.items || res || [];
-          setVacantPremises(list);
-        } catch (e) {
-          console.error("Lỗi khi tải danh sách mặt bằng trống:", e);
-        }
-      };
-      loadVacant();
+      loadVacantPremises();
     }
-  }, [isTenant, open]);
+  }, [isTenant, open, loadVacantPremises]);
+
+  const openCreateModal = () => {
+    form.resetFields();
+    setSelectedPremise(null);
+    setOpen(true);
+  };
+
+  const handlePremiseChange = (value) => {
+    const premise = vacantPremises.find((item) => getPremiseId(item) === value);
+    setSelectedPremise(premise || null);
+  };
 
   const create = async () => {
     try {
-      await rentRequestService.create(form.getFieldsValue(true));
+      const values = await form.validateFields();
+
+      await rentRequestService.create(values);
+
       message.success("Đã gửi yêu cầu thuê thêm");
       setOpen(false);
       form.resetFields();
+      setSelectedPremise(null);
       reload();
-    } catch (e) {
-      showApiError(e);
+    } catch (error) {
+      showApiError(error);
     }
   };
 
-  const review = async (row, ket_qua) => {
+  const review = async (row, ketQua) => {
     try {
-      const payload = { ket_qua };
-      if (ket_qua === "TU_CHOI") {
+      const payload = { ket_qua: ketQua };
+
+      if (ketQua === "TU_CHOI") {
         payload.ly_do_tu_choi = "Không đáp ứng điều kiện thuê thêm";
       } else {
         payload.ghi_chu_cho_kdtc = "Chuyển sang số hóa hợp đồng";
       }
+
       await rentRequestService.review(
         pickId(row, ["ma_yeu_cau", "ma_yc", "MAYC"]),
-        payload
+        payload,
       );
+
       message.success("Đã xử lý yêu cầu");
       reload();
-    } catch (e) {
-      showApiError(e);
+    } catch (error) {
+      showApiError(error);
     }
   };
+
+  const premiseOptions = vacantPremises
+    .map((item) => {
+      const value = getPremiseId(item);
+      const viTri = pick(item, ["vi_tri", "VITRI"], "");
+      const dienTich = pick(item, ["dien_tich", "DIENTICH"], "");
+      const tang = pick(item, ["tang", "TANG"], "");
+
+      return {
+        value,
+        label: `${value} - ${viTri} - Tầng ${tang} (${dienTich} m²)`,
+      };
+    })
+    .filter((item) => item.value);
 
   const columns = [
     {
       title: "Mã YC",
-      render: (_, r) => pick(r, ["ma_yeu_cau", "ma_yc", "MAYC"]),
+      render: (_, record) => pick(record, ["ma_yeu_cau", "ma_yc", "MAYC"]),
     },
     {
       title: "Khách thuê",
-      render: (_, r) => pick(r, ["ma_khach_thue", "ma_kh", "MAKH"]),
+      render: (_, record) => pick(record, ["ma_khach_thue", "ma_kh", "MAKH"]),
     },
     {
       title: "Mặt bằng",
-      render: (_, r) => pick(r, ["ma_mat_bang", "ma_mb", "MAMB"]),
+      render: (_, record) => pick(record, ["ma_mat_bang", "ma_mb", "MAMB"]),
     },
     {
       title: "Ngày gửi",
-      render: (_, r) => formatDate(pick(r, ["ngay_gui", "NGAYGUI"])),
+      render: (_, record) => formatDate(pick(record, ["ngay_gui", "NGAYGUI"])),
     },
     {
       title: "Lý do",
-      render: (_, r) => pick(r, ["ly_do", "LYDO"]),
+      render: (_, record) => pick(record, ["ly_do", "LYDO"]),
     },
     {
       title: "Trạng thái",
-      render: (_, r) => <StatusTag value={pick(r, ["trang_thai", "TRANGTHAI"])} />,
+      render: (_, record) => <StatusTag value={pick(record, ["trang_thai", "TRANGTHAI"])} />,
     },
     {
       title: "Thao tác",
-      render: (_, r) =>
-        !isTenant ? (
+      align: "right",
+      render: (_, record) =>
+        !isTenant && pick(record, ["trang_thai", "TRANGTHAI"]) === "Chờ duyệt" ? (
           <Space>
-            <Button icon={<CheckOutlined />} onClick={() => review(r, "DUYET")}>
+            <Button
+              size="small"
+              icon={<CheckOutlined />}
+              onClick={() => review(record, "DUYET")}
+            >
               Duyệt
             </Button>
-            <Button danger icon={<CloseOutlined />} onClick={() => review(r, "TU_CHOI")}>
+            <Button
+              size="small"
+              danger
+              icon={<CloseOutlined />}
+              onClick={() => review(record, "TU_CHOI")}
+            >
               Từ chối
             </Button>
           </Space>
@@ -120,53 +177,70 @@ export default function RentRequestPage() {
   return (
     <>
       <PageHeader
-        title={isTenant ? "Yêu cầu thuê thêm" : "Duyệt yêu cầu thuê thêm"}
-        breadcrumb={["Hợp đồng", "Yêu cầu thuê thêm"]}
-        actionText={isTenant ? "Gửi yêu cầu" : null}
+        title="Yêu cầu thuê thêm"
+        subtitle="Gửi và theo dõi yêu cầu thuê thêm mặt bằng"
+        actionText={isTenant ? "Gửi yêu cầu" : undefined}
         actionIcon={<PlusOutlined />}
-        onAction={() => setOpen(true)}
+        onAction={isTenant ? openCreateModal : undefined}
       />
+
       <ResponsiveTable
-        rowKey={(r) => pickId(r, ["ma_yeu_cau", "ma_yc", "MAYC"])}
+        rowKey={(record) => pickId(record, ["ma_yeu_cau", "ma_yc", "MAYC"])}
         columns={columns}
         dataSource={items}
         loading={loading}
       />
-      
+
       <Modal
         title="Gửi yêu cầu thuê thêm"
         open={open}
         onCancel={() => setOpen(false)}
         onOk={create}
+        destroyOnClose
         okText="Gửi yêu cầu"
+        cancelText="Hủy"
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="ma_mat_bang"
-            label="Mặt bằng muốn thuê thêm"
-            rules={[{ required: true, message: "Vui lòng chọn mặt bằng muốn thuê thêm" }]}
+            label="Mặt bằng thuê thêm"
+            rules={[{ required: true, message: "Vui lòng chọn mặt bằng thuê thêm" }]}
           >
             <Select
-              placeholder="Chọn mặt bằng còn trống"
               showSearch
-              optionFilterProp="children"
-              options={vacantPremises.map((item) => {
-                const ma = pick(item, ["ma_mat_bang", "ma_mb", "MAMB"]);
-                const viTri = pick(item, ["vi_tri", "VITRI"]);
-                const dienTich = pick(item, ["dien_tich", "DIENTICH"]);
-                return {
-                  value: ma,
-                  label: `${ma} - ${viTri} (${dienTich} m²)`,
-                };
-              })}
+              placeholder="Chọn mặt bằng còn trống"
+              optionFilterProp="label"
+              onChange={handlePremiseChange}
+              options={premiseOptions}
             />
           </Form.Item>
+
+          {selectedPremise ? (
+            <Descriptions bordered size="small" column={1} style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Vị trí">
+                {pick(selectedPremise, ["vi_tri", "VITRI"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tầng">
+                {pick(selectedPremise, ["tang", "TANG"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Diện tích">
+                {pick(selectedPremise, ["dien_tich", "DIENTICH"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Loại mặt bằng">
+                {pick(selectedPremise, ["loai_mat_bang", "LOAIMB"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                {pick(selectedPremise, ["trang_thai", "TRANGTHAI"], "-")}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : null}
+
           <Form.Item
             name="ly_do"
-            label="Lý do"
-            rules={[{ required: true, message: "Vui lòng nhập lý do" }]}
+            label="Lý do thuê thêm"
+            rules={[{ required: true, message: "Vui lòng nhập lý do thuê thêm" }]}
           >
-            <Input.TextArea rows={4} placeholder="Nhập lý do thuê thêm..." />
+            <Input.TextArea rows={4} placeholder="Nhập lý do thuê thêm" />
           </Form.Item>
         </Form>
       </Modal>

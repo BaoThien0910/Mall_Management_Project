@@ -1,29 +1,36 @@
 import { ThunderboltOutlined } from "@ant-design/icons";
 import {
-  Button,
   Card,
+  Descriptions,
   Form,
-  Input,
   InputNumber,
   Modal,
+  Select,
   Space,
   Typography,
   message,
 } from "antd";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
 import { meterService } from "../../services/meterService";
+import { lookupService } from "../../services/lookupService";
 import { showApiError } from "../../services/apiClient";
 import { useCrudList } from "../../hooks/useCrudList";
-import { formatMoney, pick, pickId } from "../../utils/data";
+import { formatMoney, pick, pickId, toArray } from "../../utils/data";
 
 const { Text } = Typography;
+
+function getPremiseId(record) {
+  return pick(record, ["ma_mat_bang", "ma_mb", "MAMB"], undefined);
+}
 
 export default function MeterReadingPage() {
   const [open, setOpen] = useState(false);
   const [latestResult, setLatestResult] = useState(null);
+  const [premises, setPremises] = useState([]);
+  const [selectedPremise, setSelectedPremise] = useState(null);
   const [form] = Form.useForm();
 
   const fetcher = useCallback((params) => meterService.list(params), []);
@@ -31,6 +38,51 @@ export default function MeterReadingPage() {
     page: 1,
     page_size: 20,
   });
+
+  const loadPremises = useCallback(async () => {
+    try {
+      const data = await lookupService.meterPremises();
+      setPremises(toArray(data));
+    } catch (error) {
+      showApiError(error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPremises();
+  }, [loadPremises]);
+
+  const premiseOptions = useMemo(
+    () =>
+      premises
+        .map((item) => {
+          const value = getPremiseId(item);
+          return {
+            value,
+            label:
+              item.label ||
+              `${value} - ${pick(item, ["vi_tri", "VITRI"], "")} - Tầng ${pick(
+                item,
+                ["tang", "TANG"],
+                "",
+              )}`,
+          };
+        })
+        .filter((item) => item.value),
+    [premises],
+  );
+
+  const handlePremiseChange = (value) => {
+    const premise = premises.find((item) => getPremiseId(item) === value);
+    setSelectedPremise(premise || null);
+  };
+
+  const openCreateModal = () => {
+    form.resetFields();
+    setSelectedPremise(null);
+    setOpen(true);
+    loadPremises();
+  };
 
   const create = async () => {
     try {
@@ -41,7 +93,9 @@ export default function MeterReadingPage() {
       setLatestResult(result);
       setOpen(false);
       form.resetFields();
+      setSelectedPremise(null);
       reload();
+      loadPremises();
     } catch (error) {
       showApiError(error);
     }
@@ -98,20 +152,23 @@ export default function MeterReadingPage() {
     <>
       <PageHeader
         title="Chỉ số điện nước"
-        subtitle="Nhập chỉ số điện nước theo mặt bằng. Backend tự tính tiền điện/nước theo đơn giá cố định."
-        breadcrumb={["Vận hành - Bảo trì", "Chỉ số điện nước"]}
+        subtitle="Nhập và theo dõi chỉ số điện nước theo mặt bằng"
         actionText="Nhập chỉ số"
         actionIcon={<ThunderboltOutlined />}
-        onAction={() => setOpen(true)}
+        onAction={openCreateModal}
       />
 
       {latestResult ? (
-        <Card className="section-card">
-          <Space wrap size={24}>
-            <Text strong>Số điện: {pick(latestResult, ["so_dien_tieu_thu", "SODIEN_TIEUTHU"], 0)}</Text>
-            <Text strong>Tiền điện: {formatMoney(pick(latestResult, ["tien_dien", "TIENDIEN"], 0))}</Text>
-            <Text strong>Số nước: {pick(latestResult, ["so_nuoc_tieu_thu", "SONUOC_TIEUTHU"], 0)}</Text>
-            <Text strong>Tiền nước: {formatMoney(pick(latestResult, ["tien_nuoc", "TIENNUOC"], 0))}</Text>
+        <Card style={{ marginBottom: 16 }}>
+          <Space wrap>
+            <Text strong>Số điện:</Text>
+            <Text>{pick(latestResult, ["so_dien_tieu_thu", "SODIEN_TIEUTHU"], 0)}</Text>
+            <Text strong>Tiền điện:</Text>
+            <Text>{formatMoney(pick(latestResult, ["tien_dien", "TIENDIEN"], 0))}</Text>
+            <Text strong>Số nước:</Text>
+            <Text>{pick(latestResult, ["so_nuoc_tieu_thu", "SONUOC_TIEUTHU"], 0)}</Text>
+            <Text strong>Tiền nước:</Text>
+            <Text>{formatMoney(pick(latestResult, ["tien_nuoc", "TIENNUOC"], 0))}</Text>
           </Space>
         </Card>
       ) : null}
@@ -128,29 +185,82 @@ export default function MeterReadingPage() {
         open={open}
         onCancel={() => setOpen(false)}
         onOk={create}
+        destroyOnClose
         okText="Lưu"
         cancelText="Hủy"
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="Mã mặt bằng" name="ma_mat_bang" rules={[{ required: true, message: "Nhập mã mặt bằng" }]}>
-            <Input placeholder="Ví dụ: MB_TEST_001" />
+          <Form.Item
+            name="ma_mat_bang"
+            label="Mặt bằng"
+            rules={[{ required: true, message: "Vui lòng chọn mặt bằng" }]}
+          >
+            <Select
+              showSearch
+              placeholder="Chọn mặt bằng đang thuê"
+              options={premiseOptions}
+              optionFilterProp="label"
+              onChange={handlePremiseChange}
+            />
           </Form.Item>
-          <Form.Item label="Tháng" name="thang" rules={[{ required: true, message: "Nhập tháng" }]}>
-            <InputNumber min={1} max={12} style={{ width: "100%" }} />
+
+          {selectedPremise ? (
+            <Descriptions bordered size="small" column={1} style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Vị trí">
+                {pick(selectedPremise, ["vi_tri", "VITRI"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tầng">
+                {pick(selectedPremise, ["tang", "TANG"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Diện tích">
+                {pick(selectedPremise, ["dien_tich", "DIENTICH"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Loại mặt bằng">
+                {pick(selectedPremise, ["loai_mat_bang", "LOAIMB"], "-")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                {pick(selectedPremise, ["trang_thai", "TRANGTHAI"], "-")}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : null}
+
+          <Form.Item name="thang" label="Tháng" rules={[{ required: true, message: "Vui lòng nhập tháng" }]}>
+            <InputNumber min={1} max={12} style={{ width: "100%" }} placeholder="Nhập tháng" />
           </Form.Item>
-          <Form.Item label="Năm" name="nam" rules={[{ required: true, message: "Nhập năm" }]}>
-            <InputNumber min={2000} max={2100} style={{ width: "100%" }} />
+
+          <Form.Item name="nam" label="Năm" rules={[{ required: true, message: "Vui lòng nhập năm" }]}>
+            <InputNumber min={2000} style={{ width: "100%" }} placeholder="Nhập năm" />
           </Form.Item>
-          <Form.Item label="Chỉ số điện đầu" name="chi_so_dien_dau" rules={[{ required: true, message: "Nhập chỉ số điện đầu" }]}>
+
+          <Form.Item
+            name="chi_so_dien_dau"
+            label="Chỉ số điện đầu"
+            rules={[{ required: true, message: "Vui lòng nhập chỉ số điện đầu" }]}
+          >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item label="Chỉ số điện cuối" name="chi_so_dien_cuoi" rules={[{ required: true, message: "Nhập chỉ số điện cuối" }]}>
+
+          <Form.Item
+            name="chi_so_dien_cuoi"
+            label="Chỉ số điện cuối"
+            rules={[{ required: true, message: "Vui lòng nhập chỉ số điện cuối" }]}
+          >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item label="Chỉ số nước đầu" name="chi_so_nuoc_dau" rules={[{ required: true, message: "Nhập chỉ số nước đầu" }]}>
+
+          <Form.Item
+            name="chi_so_nuoc_dau"
+            label="Chỉ số nước đầu"
+            rules={[{ required: true, message: "Vui lòng nhập chỉ số nước đầu" }]}
+          >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item label="Chỉ số nước cuối" name="chi_so_nuoc_cuoi" rules={[{ required: true, message: "Nhập chỉ số nước cuối" }]}>
+
+          <Form.Item
+            name="chi_so_nuoc_cuoi"
+            label="Chỉ số nước cuối"
+            rules={[{ required: true, message: "Vui lòng nhập chỉ số nước cuối" }]}
+          >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
         </Form>
