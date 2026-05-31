@@ -109,6 +109,7 @@ export default function AuditLogPage() {
       <Toolbar
         onSearch={handleSearch}
         onReload={handleReload}
+        reloadAfterChildren
       >
         <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
           <span>From:</span>

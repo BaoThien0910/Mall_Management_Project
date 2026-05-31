@@ -47,6 +47,13 @@ export default function PremiseListPage() {
   const [minArea, setMinArea] = useState(null);
   const [maxArea, setMaxArea] = useState(null);
 
+  // Temporary Filter States (inside Popover)
+  const [tempStatuses, setTempStatuses] = useState([]);
+  const [tempFloors, setTempFloors] = useState([]);
+  const [tempTypes, setTempTypes] = useState([]);
+  const [tempMinArea, setTempMinArea] = useState(null);
+  const [tempMaxArea, setTempMaxArea] = useState(null);
+
   // Fetch unique floors & types on mount
   const loadFilterOptions = useCallback(async () => {
     try {
@@ -139,40 +146,6 @@ export default function PremiseListPage() {
     }
   };
 
-  const handleStatusChange = (status, checked) => {
-    const next = checked 
-      ? [...selectedStatuses, status] 
-      : selectedStatuses.filter(s => s !== status);
-    setSelectedStatuses(next);
-    applyFilters({ trang_thai: next.length ? next.join(",") : undefined }, false);
-  };
-
-  const handleFloorChange = (floor, checked) => {
-    const next = checked 
-      ? [...selectedFloors, floor] 
-      : selectedFloors.filter(f => f !== floor);
-    setSelectedFloors(next);
-    applyFilters({ tang: next.length ? next.join(",") : undefined }, false);
-  };
-
-  const handleTypeChange = (type, checked) => {
-    const next = checked 
-      ? [...selectedTypes, type] 
-      : selectedTypes.filter(t => t !== type);
-    setSelectedTypes(next);
-    applyFilters({ loai_mat_bang: next.length ? next.join(",") : undefined }, false);
-  };
-
-  const handleMinAreaChange = (val) => {
-    setMinArea(val);
-    applyFilters({ dien_tich_tu: val !== null && val !== "" ? val : undefined }, false);
-  };
-
-  const handleMaxAreaChange = (val) => {
-    setMaxArea(val);
-    applyFilters({ dien_tich_den: val !== null && val !== "" ? val : undefined }, false);
-  };
-
   const handleKeywordSearch = () => {
     applyFilters({ keyword: keyword || undefined }, true);
   };
@@ -196,7 +169,58 @@ export default function PremiseListPage() {
   };
 
   const handleOpenPopover = (visible) => {
+    if (visible) {
+      setTempStatuses(selectedStatuses);
+      setTempFloors(selectedFloors);
+      setTempTypes(selectedTypes);
+      setTempMinArea(minArea);
+      setTempMaxArea(maxArea);
+    }
     setPopoverOpen(visible);
+  };
+
+  const handleApply = () => {
+    setSelectedStatuses(tempStatuses);
+    setSelectedFloors(tempFloors);
+    setSelectedTypes(tempTypes);
+    setMinArea(tempMinArea);
+    setMaxArea(tempMaxArea);
+    setPopoverOpen(false);
+
+    applyFilters({
+      trang_thai: tempStatuses.length ? tempStatuses.join(",") : undefined,
+      tang: tempFloors.length ? tempFloors.join(",") : undefined,
+      loai_mat_bang: tempTypes.length ? tempTypes.join(",") : undefined,
+      dien_tich_tu: tempMinArea !== null && tempMinArea !== "" ? tempMinArea : undefined,
+      dien_tich_den: tempMaxArea !== null && tempMaxArea !== "" ? tempMaxArea : undefined,
+    }, true);
+  };
+
+  const handleCancel = () => {
+    setPopoverOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempStatuses([]);
+    setTempFloors([]);
+    setTempTypes([]);
+    setTempMinArea(null);
+    setTempMaxArea(null);
+
+    setSelectedStatuses([]);
+    setSelectedFloors([]);
+    setSelectedTypes([]);
+    setMinArea(null);
+    setMaxArea(null);
+    setPopoverOpen(false);
+
+    applyFilters({
+      trang_thai: undefined,
+      tang: undefined,
+      loai_mat_bang: undefined,
+      dien_tich_tu: undefined,
+      dien_tich_den: undefined,
+    }, true);
   };
 
   const handleRemoveStatus = (statusToRemove) => {
@@ -241,12 +265,17 @@ export default function PremiseListPage() {
           <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '13px', color: '#111' }}>Trạng thái</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {MAT_BANG_STATUS.map(status => {
-              const checked = selectedStatuses.includes(status);
+              const checked = tempStatuses.includes(status);
               return (
                 <Checkbox
                   key={status}
                   checked={checked}
-                  onChange={(e) => handleStatusChange(status, e.target.checked)}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                      ? [...tempStatuses, status]
+                      : tempStatuses.filter(s => s !== status);
+                    setTempStatuses(next);
+                  }}
                 >
                   {status}
                 </Checkbox>
@@ -260,7 +289,7 @@ export default function PremiseListPage() {
           <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '13px', color: '#111' }}>Tầng</div>
           <div style={{ maxHeight: '130px', overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {allFloors.map(floor => {
-              const checked = selectedFloors.includes(floor);
+              const checked = tempFloors.includes(floor);
               const label = floor === 0 ? "Tầng trệt" : `Tầng ${floor}`;
               return (
                 <div
@@ -277,7 +306,12 @@ export default function PremiseListPage() {
                 >
                   <Checkbox
                     checked={checked}
-                    onChange={(e) => handleFloorChange(floor, e.target.checked)}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                        ? [...tempFloors, floor]
+                        : tempFloors.filter(f => f !== floor);
+                      setTempFloors(next);
+                    }}
                     style={{ width: '100%' }}
                   >
                     <span style={{ color: checked ? '#1677ff' : 'inherit', fontWeight: checked ? 500 : 'normal' }}>
@@ -295,11 +329,16 @@ export default function PremiseListPage() {
           <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '13px', color: '#111' }}>Loại mặt bằng</div>
           <div style={{ maxHeight: '130px', overflowY: 'auto', paddingRight: '4px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {allTypes.map(type => {
-              const checked = selectedTypes.includes(type);
+              const checked = tempTypes.includes(type);
               return (
                 <div
                   key={type}
-                  onClick={() => handleTypeChange(type, !checked)}
+                  onClick={() => {
+                    const next = checked
+                      ? tempTypes.filter(t => t !== type)
+                      : [...tempTypes, type];
+                    setTempTypes(next);
+                  }}
                   style={{
                     border: `1px solid ${checked ? '#1677ff' : '#d9d9d9'}`,
                     backgroundColor: checked ? '#e6f4ff' : '#fff',
@@ -331,16 +370,16 @@ export default function PremiseListPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <InputNumber
             placeholder="Từ m²"
-            value={minArea}
-            onChange={handleMinAreaChange}
+            value={tempMinArea}
+            onChange={(val) => setTempMinArea(val)}
             style={{ width: '100%' }}
             min={0}
           />
           <span style={{ color: '#bfbfbf' }}>-</span>
           <InputNumber
             placeholder="Đến m²"
-            value={maxArea}
-            onChange={handleMaxAreaChange}
+            value={tempMaxArea}
+            onChange={(val) => setTempMaxArea(val)}
             style={{ width: '100%' }}
             min={0}
           />
@@ -349,9 +388,16 @@ export default function PremiseListPage() {
       
       <Divider style={{ margin: '12px 0' }} />
       
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
-        <Button onClick={handleClearAll} size="small" style={{ color: '#1677ff', borderColor: '#91caff' }}>Đặt lại</Button>
-        <Button type="primary" danger onClick={() => setPopoverOpen(false)} size="small">Đóng</Button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button type="primary" danger onClick={handleClearFilters}>
+          Xóa bộ lọc
+        </Button>
+        <Space size={8}>
+          <Button onClick={handleCancel}>Hủy</Button>
+          <Button type="primary" onClick={handleApply}>
+            Áp dụng
+          </Button>
+        </Space>
       </div>
     </div>
   );
@@ -487,6 +533,10 @@ export default function PremiseListPage() {
             style={{ width: 340 }}
           />
           
+          <Button icon={<ReloadOutlined />} onClick={handleReload} style={{ minWidth: 100 }}>
+            Tải lại
+          </Button>
+
           <Popover
             content={filterContent}
             title="Bộ lọc"
@@ -502,8 +552,8 @@ export default function PremiseListPage() {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                height: '38px',
-                borderRadius: '8px',
+                minWidth: 100,
+                justifyContent: 'center',
               }}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center' }}>Lọc</span>
@@ -529,10 +579,6 @@ export default function PremiseListPage() {
               )}
             </Button>
           </Popover>
-          
-          <Button icon={<ReloadOutlined />} onClick={handleReload}>
-            Tải lại
-          </Button>
         </div>
         {renderActiveTags()}
       </Card>

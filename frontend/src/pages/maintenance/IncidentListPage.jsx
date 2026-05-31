@@ -605,6 +605,10 @@ export default function IncidentListPage() {
             style={{ width: 340 }}
           />
 
+          <Button icon={<ReloadOutlined />} onClick={handleReload} style={{ minWidth: 100 }}>
+            Tải lại
+          </Button>
+
           <Popover
             content={filterContent}
             title="Bộ lọc"
@@ -620,8 +624,8 @@ export default function IncidentListPage() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                height: "38px",
-                borderRadius: "8px",
+                minWidth: 100,
+                justifyContent: "center",
               }}
             >
               <span style={{ display: "inline-flex", alignItems: "center" }}>Lọc</span>
@@ -647,10 +651,6 @@ export default function IncidentListPage() {
               )}
             </Button>
           </Popover>
-
-          <Button icon={<ReloadOutlined />} onClick={handleReload}>
-            Tải lại
-          </Button>
         </div>
       </Card>
 
