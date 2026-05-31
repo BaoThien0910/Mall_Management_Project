@@ -1,4 +1,4 @@
-import { LockOutlined, PlusOutlined, UnlockOutlined } from "@ant-design/icons";
+import { LockOutlined, PlusOutlined, UnlockOutlined, FilterOutlined } from "@ant-design/icons";
 import {
   Button,
   Descriptions,
@@ -9,8 +9,9 @@ import {
   Select,
   Space,
   message,
+  Popover,
 } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
@@ -44,6 +45,108 @@ export default function AccountListPage() {
   });
 
   const [keyword, setKeyword] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const timerRef = useRef(null);
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    ma_vai_tro: undefined,
+  });
+
+  const [tempMaVaiTro, setTempMaVaiTro] = useState(undefined);
+
+  const applySearch = (val) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      const activeFilters = {};
+      if (appliedFilters.ma_vai_tro) {
+        activeFilters.ma_vai_tro = appliedFilters.ma_vai_tro;
+      }
+      setParams({
+        keyword: val || undefined,
+        ...activeFilters,
+        page: 1,
+        page_size: 20,
+      });
+    }, 500);
+  };
+
+  const handleApply = () => {
+    const nextFilters = {
+      ma_vai_tro: tempMaVaiTro,
+    };
+    setAppliedFilters(nextFilters);
+    setPopoverOpen(false);
+
+    setParams({
+      keyword: keyword || undefined,
+      ma_vai_tro: tempMaVaiTro || undefined,
+      page: 1,
+      page_size: 20,
+    });
+  };
+
+  const handleCancel = () => {
+    setTempMaVaiTro(appliedFilters.ma_vai_tro);
+    setPopoverOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempMaVaiTro(undefined);
+    setAppliedFilters({
+      ma_vai_tro: undefined,
+    });
+    setPopoverOpen(false);
+
+    setParams({
+      keyword: keyword || undefined,
+      page: 1,
+      page_size: 20,
+    });
+  };
+
+  const handleReload = () => {
+    setKeyword("");
+    setAppliedFilters({
+      ma_vai_tro: undefined,
+    });
+    setTempMaVaiTro(undefined);
+    setParams({
+      page: 1,
+      page_size: 20,
+    });
+    reload();
+  };
+
+  const activeFiltersCount = appliedFilters.ma_vai_tro ? 1 : 0;
+
+  const filterContent = (
+    <div style={{ padding: "8px", width: 280 }}>
+      {/* Vai trò */}
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Vai trò</div>
+        <Select
+          placeholder="Chọn vai trò"
+          value={tempMaVaiTro || undefined}
+          onChange={setTempMaVaiTro}
+          style={{ width: "100%" }}
+          allowClear
+          options={ROLE_OPTIONS}
+        />
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button type="primary" danger onClick={handleClearFilters}>
+          Xóa bộ lọc
+        </Button>
+        <Button type="primary" onClick={handleApply}>
+          Áp dụng
+        </Button>
+      </div>
+    </div>
+  );
   const [open, setOpen] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -338,16 +441,60 @@ export default function AccountListPage() {
 
       <Toolbar
         keyword={keyword}
-        onKeywordChange={setKeyword}
-        onSearch={() =>
-          setParams({
-            keyword,
-            page: 1,
-            page_size: 20,
-          })
-        }
-        onReload={reload}
-      />
+        onKeywordChange={(val) => {
+          setKeyword(val);
+          applySearch(val);
+        }}
+        placeholder="Tìm kiếm tên người dùng"
+        onReload={handleReload}
+      >
+        <Popover
+          content={filterContent}
+          trigger="click"
+          open={popoverOpen}
+          onOpenChange={(visible) => {
+            setPopoverOpen(visible);
+            if (!visible) {
+              handleCancel();
+            }
+          }}
+          placement="bottomLeft"
+          overlayStyle={{ zIndex: 1050 }}
+        >
+          <Button
+            type="primary"
+            icon={<FilterOutlined />}
+            style={{
+              minWidth: 100,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center" }}>Lọc</span>
+            {activeFiltersCount > 0 && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: "#fff",
+                  color: "#1677ff",
+                  borderRadius: "50%",
+                  width: "20px",
+                  height: "20px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: "1",
+                }}
+              >
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+        </Popover>
+      </Toolbar>
 
       <ResponsiveTable
         rowKey={(record) => pickId(record, ["ma_tai_khoan", "ma_tk", "MATK"])}
