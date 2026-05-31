@@ -24,10 +24,10 @@ const actorActions = {
     ["Số hóa hợp đồng", ROUTES.CONTRACTS], ["Import tài chính", ROUTES.FINANCIAL_IMPORT], ["Công nợ", ROUTES.DEBTS]
   ],
   [ROLE.TP_VHBT]: [
-    ["Mặt bằng", ROUTES.PREMISES], ["Chỉ số điện nước", ROUTES.PREMISES], ["Phân công sự cố", ROUTES.INCIDENTS], ["Lịch bảo trì", ROUTES.MAINTENANCE_SCHEDULES], ["Báo cáo bảo trì", ROUTES.MAINTENANCE_REPORTS]
+    ["Mặt bằng", ROUTES.PREMISES], ["Chỉ số điện nước", ROUTES.PREMISES], ["Phân công sự cố", ROUTES.INCIDENTS], ["Báo cáo bảo trì", ROUTES.MAINTENANCE_REPORTS]
   ],
   [ROLE.NV_VHBT]: [
-    ["Mặt bằng", ROUTES.PREMISES], ["Nhập chỉ số điện nước", ROUTES.PREMISES], ["Xử lý sự cố", ROUTES.INCIDENTS], ["Lịch bảo trì", ROUTES.MAINTENANCE_SCHEDULES]
+    ["Mặt bằng", ROUTES.PREMISES], ["Nhập chỉ số điện nước", ROUTES.PREMISES], ["Xử lý sự cố", ROUTES.INCIDENTS]
   ],
   [ROLE.KHACH_THUE]: [
     ["Mặt bằng còn trống", ROUTES.PREMISES], ["Hợp đồng của tôi", ROUTES.MY_CONTRACTS], ["Yêu cầu thuê thêm", ROUTES.RENT_REQUESTS], ["Công nợ & thanh toán", ROUTES.MY_DEBTS], ["Yêu cầu sửa chữa", ROUTES.INCIDENTS]
@@ -53,8 +53,7 @@ export default function DashboardPage() {
       try {
         const response = await dashboardService.getMyDashboard();
         const data = response.summary_cards ? response : (response.data?.data || response.data);
-        
-        console.log("DEBUG API DASHBOARD:", data); //debug
+    
 
         if (data) {
           setDashboardData(data);

@@ -57,7 +57,7 @@ export const routePermissions = {
   [ROUTES.FINANCIAL_REPORTS]: [ROLE.BQL, ROLE.TP_KDTC],
   [ROUTES.METER_READINGS]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.INCIDENTS]: [ROLE.BQL, ROLE.TP_VHBT, ROLE.NV_VHBT, ROLE.KHACH_THUE],
-  [ROUTES.MAINTENANCE_SCHEDULES]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
+  [ROUTES.MAINTENANCE_SCHEDULES]: [],
   [ROUTES.MAINTENANCE_REPORTS]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.NOTIFICATIONS]: [ROLE.BQL, ROLE.QTV, ROLE.TP_KDTC, ROLE.NV_KDTC, ROLE.TP_VHBT, ROLE.NV_VHBT, ROLE.KHACH_THUE],
 };
@@ -85,7 +85,6 @@ export const menuItems = [
   item(ROUTES.FINANCIAL_REPORTS, "Báo cáo tài chính", PieChartOutlined, routePermissions[ROUTES.FINANCIAL_REPORTS]),
   item(ROUTES.METER_READINGS, "Chỉ số điện nước", ThunderboltOutlined, routePermissions[ROUTES.METER_READINGS]),
   item(ROUTES.INCIDENTS, "Sự cố bảo trì", ToolOutlined, routePermissions[ROUTES.INCIDENTS], "incidents"),
-  item(ROUTES.MAINTENANCE_SCHEDULES, "Lịch bảo trì", CalendarOutlined, routePermissions[ROUTES.MAINTENANCE_SCHEDULES], "maintenance_schedules"),
   item(ROUTES.MAINTENANCE_REPORTS, "Báo cáo bảo trì", ContainerOutlined, routePermissions[ROUTES.MAINTENANCE_REPORTS]),
   item(ROUTES.NOTIFICATIONS, "Thông báo", NotificationOutlined, routePermissions[ROUTES.NOTIFICATIONS], "notifications"),
 ];
