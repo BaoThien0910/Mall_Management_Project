@@ -3,7 +3,7 @@ import { HomeOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
-export default function PageHeader({ title, subtitle, breadcrumb = [], actionText, actionIcon, onAction, extra }) {
+export default function PageHeader({ title, subtitle, breadcrumb = [], actionText, actionIcon, onAction, actionDisabled, extra }) {
   return (
     <div className="page-header-block">
       <div>
@@ -20,7 +20,7 @@ export default function PageHeader({ title, subtitle, breadcrumb = [], actionTex
       <Space wrap>
         {extra}
         {actionText ? (
-          <Button type="primary" icon={actionIcon} onClick={onAction}>{actionText}</Button>
+          <Button type="primary" icon={actionIcon} onClick={onAction} disabled={actionDisabled}>{actionText}</Button>
         ) : null}
       </Space>
     </div>
