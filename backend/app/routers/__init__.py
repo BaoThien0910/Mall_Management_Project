@@ -7,7 +7,7 @@ from . import congno
 from . import dashboard
 from . import hopdong
 from . import import_taichinh
-from . import lichbt
+from . import lookup
 from . import matbang
 from . import nhatky
 from . import rbac
@@ -16,7 +16,7 @@ from . import taikhoan
 from . import thanh_toan
 from . import thongbao
 from . import yc_thuethem
-from . import lookup
+
 __all__ = [
     "auth",
     "taikhoan",
@@ -30,7 +30,6 @@ __all__ = [
     "import_taichinh",
     "baocaotaichinh",
     "sk_baotri",
-    "lichbt",
     "baocaobaotri",
     "thongbao",
     "nhatky",

@@ -35,7 +35,6 @@ export const ROUTES = {
   FINANCIAL_REPORTS: "/reports/financial",
   METER_READINGS: "/maintenance/chi-so-dien-nuoc",
   INCIDENTS: "/maintenance/su-co",
-  MAINTENANCE_SCHEDULES: "/maintenance/lich-bao-tri",
   MAINTENANCE_REPORTS: "/reports/maintenance",
   NOTIFICATIONS: "/notifications",
 };
@@ -64,7 +63,6 @@ export const routePermissions = {
   [ROUTES.FINANCIAL_REPORTS]: [ROLE.BQL, ROLE.TP_KDTC],
   [ROUTES.METER_READINGS]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.INCIDENTS]: [ROLE.BQL, ROLE.TP_VHBT, ROLE.NV_VHBT, ROLE.KHACH_THUE],
-  [ROUTES.MAINTENANCE_SCHEDULES]: [ROLE.TP_VHBT, ROLE.NV_VHBT],
   [ROUTES.MAINTENANCE_REPORTS]: [ROLE.BQL, ROLE.TP_VHBT],
   [ROUTES.NOTIFICATIONS]: [
     ROLE.BQL,

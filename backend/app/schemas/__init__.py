@@ -73,11 +73,6 @@ from .sk_baotri import (
     SuCoBaoTriFilter,
     SuCoBaoTriResponse,
 )
-from .lichbt import (
-    LichBaoTriCreate,
-    LichBaoTriFilter,
-    LichBaoTriResponse,
-)
 from .baocaobaotri import (
     BaoCaoBaoTriFilter,
     BaoCaoBaoTriResponse,
@@ -145,9 +140,6 @@ __all__ = [
     "NhapChiPhiBaoTriRequest",
     "SuCoBaoTriResponse",
     "SuCoBaoTriFilter",
-    "LichBaoTriCreate",
-    "LichBaoTriResponse",
-    "LichBaoTriFilter",
     "BaoCaoTrangThaiMatBangCreate",
     "BaoCaoBaoTriResponse",
     "BaoCaoBaoTriFilter",

@@ -4,7 +4,6 @@ from typing import Any, Dict, List
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.baocaotaichinh import BaoCaoTaiChinh
 from app.models.congno import CongNo
 from app.models.dulieu_import_taichinh import DuLieuImportTaiChinh
 from app.models.hopdong import HopDong
@@ -20,7 +19,13 @@ def _count(db: Session, stmt: Any) -> int:
     return int(db.execute(stmt).scalar_one() or 0)
 
 
-def _card(key: str, title: str, value: Any, description: str = None, status: str = None) -> Dict[str, Any]:
+def _card(
+    key: str,
+    title: str,
+    value: Any,
+    description: str | None = None,
+    status: str | None = None,
+) -> Dict[str, Any]:
     return {
         "key": key,
         "title": title,
@@ -124,6 +129,7 @@ def get_my_dashboard(db: Session, current_user: Any) -> Dict[str, Any]:
             "menu_badges": {
                 "debts": unpaid_debts,
                 "financial_import": import_errors,
+                "import_errors": import_errors,
             },
         }
 
@@ -135,8 +141,8 @@ def get_my_dashboard(db: Session, current_user: Any) -> Dict[str, Any]:
             manv = _employee_id(current_user)
             if manv:
                 stmt_pending = stmt_pending.where(SuCoBaoTri.ma_nhan_vien_xu_ly == manv)
-        processing_incidents = _count(db, stmt_pending)
 
+        processing_incidents = _count(db, stmt_pending)
         pending_assignment = _count(
             db,
             select(func.count()).select_from(SuCoBaoTri).where(
@@ -151,7 +157,6 @@ def get_my_dashboard(db: Session, current_user: Any) -> Dict[str, Any]:
             ],
             "menu_badges": {
                 "incidents": processing_incidents,
-                "maintenance_schedules": 0,
             },
         }
 

@@ -16,7 +16,6 @@ from app.models.congno import CongNo
 from app.models.hoadon import HoaDon
 from app.models.baocaotaichinh import BaoCaoTaiChinh, BaoCaoTaiChinhChiTiet
 from app.models.sk_baotri import SuCoBaoTri
-from app.models.lichbt import LichBaoTri
 from app.models.baocaobaotri import BaoCaoBaoTri, BaoCaoBaoTriChiTiet
 
 __all__ = [
@@ -38,7 +37,6 @@ __all__ = [
     "BaoCaoTaiChinh",
     "BaoCaoTaiChinhChiTiet",
     "SuCoBaoTri",
-    "LichBaoTri",
     "BaoCaoBaoTri",
     "BaoCaoBaoTriChiTiet",
 ]
