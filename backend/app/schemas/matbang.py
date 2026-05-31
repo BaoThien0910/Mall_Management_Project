@@ -1,4 +1,5 @@
 # File: app/schemas/matbang.py
+
 from decimal import Decimal
 from typing import Optional
 
@@ -38,6 +39,25 @@ class MatBangUpdate(BaseModel):
     def validate_optional_text(cls, value: Optional[str]) -> Optional[str]:
         if value is not None and not ensure_not_blank(value):
             raise ValueError("Giá trị không được là chuỗi rỗng.")
+        return value
+
+
+class MatBangTrangThaiBaoTriUpdate(BaseModel):
+    """Payload riêng cho thao tác đổi trạng thái bảo trì của mặt bằng."""
+
+    trang_thai: MatBangStatus
+
+    @field_validator("trang_thai")
+    @classmethod
+    def validate_maintenance_status(cls, value: MatBangStatus) -> MatBangStatus:
+        allowed_statuses = {
+            MatBangStatus.CON_TRONG,
+            MatBangStatus.DANG_BAO_TRI,
+        }
+        if value not in allowed_statuses:
+            raise ValueError(
+                "Chỉ được chuyển trạng thái mặt bằng giữa 'Còn trống' và 'Đang bảo trì'."
+            )
         return value
 
 
