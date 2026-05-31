@@ -158,20 +158,6 @@ export default function MeterReadingPage() {
         onAction={openCreateModal}
       />
 
-      {latestResult ? (
-        <Card style={{ marginBottom: 16 }}>
-          <Space wrap>
-            <Text strong>Số điện:</Text>
-            <Text>{pick(latestResult, ["so_dien_tieu_thu", "SODIEN_TIEUTHU"], 0)}</Text>
-            <Text strong>Tiền điện:</Text>
-            <Text>{formatMoney(pick(latestResult, ["tien_dien", "TIENDIEN"], 0))}</Text>
-            <Text strong>Số nước:</Text>
-            <Text>{pick(latestResult, ["so_nuoc_tieu_thu", "SONUOC_TIEUTHU"], 0)}</Text>
-            <Text strong>Tiền nước:</Text>
-            <Text>{formatMoney(pick(latestResult, ["tien_nuoc", "TIENNUOC"], 0))}</Text>
-          </Space>
-        </Card>
-      ) : null}
 
       <ResponsiveTable
         rowKey={(record) => pickId(record, ["ma_chi_so_dien_nuoc", "ma_csdn", "MACSDN"])}
