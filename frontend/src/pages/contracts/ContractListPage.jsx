@@ -19,6 +19,8 @@ import { contractService } from "../../services/contractService";
 import { lookupService } from "../../services/lookupService";
 import { showApiError } from "../../services/apiClient";
 import { useCrudList } from "../../hooks/useCrudList";
+import { ROLE } from "../../constants/roles";
+import { useAuth } from "../../hooks/useAuth";
 import {
   pick,
   pickId,
@@ -40,6 +42,9 @@ function getRentRequestId(record) {
 }
 
 export default function ContractListPage() {
+  const { role } = useAuth();
+  const canCreate = role === ROLE.QTV || role === ROLE.TP_KDTC || role === ROLE.NV_KDTC;
+
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [form] = Form.useForm();
@@ -73,8 +78,10 @@ export default function ContractListPage() {
   }, []);
 
   useEffect(() => {
-    loadContractLookups();
-  }, [loadContractLookups]);
+    if (canCreate) {
+      loadContractLookups();
+    }
+  }, [loadContractLookups, canCreate]);
 
   const tenantOptions = useMemo(
     () =>
@@ -276,6 +283,7 @@ export default function ContractListPage() {
         actionText="Số hóa hợp đồng"
         actionIcon={<PlusOutlined />}
         onAction={openCreateModal}
+        actionDisabled={!canCreate}
       />
 
       <Toolbar
