@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+
+from sqlalchemy import CheckConstraint, DECIMAL, ForeignKey, Index, String, Unicode, UnicodeText, text
 from sqlalchemy.dialects.mssql import DATETIME2
-from sqlalchemy import CheckConstraint, DateTime, DECIMAL, ForeignKey, Index, String, Unicode, UnicodeText, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -96,7 +97,9 @@ class SuCoBaoTri(Base):
         back_populates="su_cos_xu_ly",
         foreign_keys=[ma_nhan_vien_xu_ly],
     )
-    bao_cao_bao_tris: Mapped[list["BaoCaoBaoTri"]] = relationship(back_populates="su_co_bao_tri")
+    bao_cao_bao_tri_chi_tiets: Mapped[list["BaoCaoBaoTriChiTiet"]] = relationship(
+        back_populates="su_co_bao_tri"
+    )
 
     def __repr__(self) -> str:
-        return f"<SuCoBaoTri(ma_su_co={self.ma_su_co!r}, trang_thai={self.trang_thai!r})>"
+        return f"<SuCoBaoTri(ma_su_co={self.ma_su_co})>"

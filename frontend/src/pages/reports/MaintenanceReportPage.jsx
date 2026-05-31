@@ -1,19 +1,250 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { Form, Input, Modal, Select, message } from "antd";
+import { DownloadOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Descriptions,
+  Form,
+  InputNumber,
+  Modal,
+  Space,
+  Table,
+  message,
+} from "antd";
 import { useCallback, useState } from "react";
+
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
 import StatusTag from "../../components/common/StatusTag";
 import { ROLE } from "../../constants/roles";
 import { useAuth } from "../../hooks/useAuth";
-import { MAT_BANG_STATUS } from "../../constants/statuses";
-import { maintenanceReportService } from "../../services/maintenanceService";
-import { showApiError } from "../../services/apiClient";
 import { useCrudList } from "../../hooks/useCrudList";
-import { pick, pickId, formatDate } from "../../utils/data";
-export default function MaintenanceReportPage(){
- const {role}=useAuth(); const canCreate=role===ROLE.TP_VHBT; const [open,setOpen]=useState(false); const [form]=Form.useForm(); const fetcher=useCallback((p)=>maintenanceReportService.list(p),[]); const {items,loading,reload}=useCrudList(fetcher,{page:1,page_size:20});
- const create=async()=>{try{await maintenanceReportService.createPremiseStatusReport(form.getFieldsValue(true)); message.success("Đã lập báo cáo bảo trì"); setOpen(false); form.resetFields(); reload();}catch(e){showApiError(e)}};
- const columns=[{title:"Mã báo cáo",render:(_,r)=>pick(r,["ma_bao_cao_bao_tri","ma_bc_bt","MABC_BT"])},{title:"Mặt bằng",render:(_,r)=>pick(r,["ma_mat_bang","MAMB"])},{title:"Ngày lập",render:(_,r)=>formatDate(pick(r,["ngay_lap","NGAYLAP"]))},{title:"Trạng thái thực tế",render:(_,r)=><StatusTag value={pick(r,["trang_thai_thuc_te","TRANGTHAI_THUCTE"])}/>},{title:"Nội dung",render:(_,r)=>pick(r,["noi_dung","NOIDUNG"])},{title:"Kết luận",render:(_,r)=>pick(r,["ket_luan","KETLUAN"])}];
- return <><PageHeader title="Báo cáo bảo trì" breadcrumb={["Báo cáo","Bảo trì"]} actionText={canCreate?"Lập báo cáo":null} actionIcon={<PlusOutlined/>} onAction={()=>setOpen(true)}/><ResponsiveTable rowKey={(r)=>pickId(r,["ma_bao_cao_bao_tri","ma_bc_bt","MABC_BT"])} columns={columns} dataSource={items} loading={loading}/><Modal title="Lập báo cáo trạng thái mặt bằng" open={open} onCancel={()=>setOpen(false)} onOk={create}><Form form={form} layout="vertical"><Form.Item name="ma_mat_bang" label="Mã mặt bằng" rules={[{required:true}]}><Input/></Form.Item><Form.Item name="trang_thai_thuc_te" label="Trạng thái thực tế" rules={[{required:true}]}><Select options={MAT_BANG_STATUS.map(v=>({value:v,label:v}))}/></Form.Item><Form.Item name="noi_dung" label="Nội dung" rules={[{required:true}]}><Input.TextArea rows={4}/></Form.Item><Form.Item name="ket_luan" label="Kết luận"><Input.TextArea rows={3}/></Form.Item></Form></Modal></>;
+import { showApiError } from "../../services/apiClient";
+import { maintenanceReportService } from "../../services/maintenanceService";
+import { formatDate, pick, pickId } from "../../utils/data";
+
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+function getReportId(record) {
+  return pickId(record, ["ma_bao_cao", "ma_bc", "MABC"]);
+}
+
+export default function MaintenanceReportPage() {
+  const { role } = useAuth();
+  const canCreate = role === ROLE.TP_VHBT;
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [form] = Form.useForm();
+
+  const fetcher = useCallback((params) => maintenanceReportService.list(params), []);
+  const { items, loading, reload } = useCrudList(fetcher, {
+    page: 1,
+    page_size: 20,
+  });
+
+  const create = async () => {
+    try {
+      const values = await form.validateFields();
+      await maintenanceReportService.create(values);
+      message.success("Đã lập báo cáo bảo trì");
+      setCreateOpen(false);
+      form.resetFields();
+      reload();
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
+  const openDetail = async (record) => {
+    const maBc = getReportId(record);
+    setDetailLoading(true);
+    setDetailOpen(true);
+
+    try {
+      const data = await maintenanceReportService.detail(maBc);
+      setDetail(data);
+    } catch (error) {
+      showApiError(error);
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const exportExcel = async () => {
+    const maBc = pick(detail?.bao_cao, ["ma_bao_cao", "MABC"], "bao-cao-bao-tri");
+
+    try {
+      const blob = await maintenanceReportService.exportExcel(maBc);
+      downloadBlob(blob, `${maBc}.xlsx`);
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
+  const listColumns = [
+    {
+      title: "MABC",
+      render: (_, record) => getReportId(record),
+    },
+    {
+      title: "MANV",
+      render: (_, record) => pick(record, ["ma_nhan_vien_lap", "MANV"]),
+    },
+    {
+      title: "KỲ CHỐT",
+      render: (_, record) => pick(record, ["ky_chot", "KYCHOT"]),
+    },
+    {
+      title: "THAO TÁC",
+      align: "right",
+      render: (_, record) => (
+        <Button size="small" icon={<EyeOutlined />} onClick={() => openDetail(record)}>
+          Xem nội dung
+        </Button>
+      ),
+    },
+  ];
+
+  const detailColumns = [
+    {
+      title: "MAYC",
+      render: (_, record) => pick(record, ["ma_yeu_cau", "MAYC"]),
+    },
+    {
+      title: "MAMB",
+      render: (_, record) => pick(record, ["ma_mat_bang", "MAMB"]),
+    },
+    {
+      title: "NGAY YC",
+      render: (_, record) => formatDate(pick(record, ["ngay_yeu_cau", "NGAYYC"])),
+    },
+    {
+      title: "MO TA",
+      render: (_, record) => pick(record, ["mo_ta", "MOTA"]),
+    },
+    {
+      title: "TRANG THAI",
+      render: (_, record) => <StatusTag value={pick(record, ["trang_thai", "TRANGTHAI"])} />,
+    },
+    {
+      title: "NGAY GIAI QUYET",
+      render: (_, record) => formatDate(pick(record, ["ngay_giai_quyet", "NGAYGIAIQUYET"])),
+    },
+    {
+      title: "KET QUA",
+      render: (_, record) => pick(record, ["ket_qua", "KETQUA"], "-"),
+    },
+  ];
+
+  const report = detail?.bao_cao;
+  const summary = detail?.thong_ke || {};
+
+  return (
+    <>
+      <PageHeader
+        title="Báo cáo bảo trì"
+        subtitle="Danh sách báo cáo bảo trì theo kỳ chốt"
+        actionText={canCreate ? "Lập báo cáo" : undefined}
+        actionIcon={<PlusOutlined />}
+        onAction={canCreate ? () => setCreateOpen(true) : undefined}
+      />
+
+      <ResponsiveTable
+        rowKey={(record) => getReportId(record)}
+        columns={listColumns}
+        dataSource={items}
+        loading={loading}
+      />
+
+      <Modal
+        title="Lập báo cáo bảo trì"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        onOk={create}
+        okText="Lập báo cáo"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="thang"
+            label="Tháng"
+            rules={[{ required: true, message: "Vui lòng nhập tháng" }]}
+          >
+            <InputNumber min={1} max={12} style={{ width: "100%" }} placeholder="MM" />
+          </Form.Item>
+
+          <Form.Item
+            name="nam"
+            label="Năm"
+            rules={[{ required: true, message: "Vui lòng nhập năm" }]}
+          >
+            <InputNumber min={2000} max={2100} style={{ width: "100%" }} placeholder="YYYY" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Nội dung báo cáo bảo trì"
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        width={1100}
+        footer={[
+          <Button key="close" onClick={() => setDetailOpen(false)}>
+            Đóng
+          </Button>,
+          <Button key="excel" type="primary" icon={<DownloadOutlined />} onClick={exportExcel}>
+            Tải Excel
+          </Button>,
+        ]}
+      >
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Descriptions bordered size="small" column={3}>
+            <Descriptions.Item label="MABC">
+              {pick(report, ["ma_bao_cao", "MABC"])}
+            </Descriptions.Item>
+            <Descriptions.Item label="MANV">
+              {pick(report, ["ma_nhan_vien_lap", "MANV"])}
+            </Descriptions.Item>
+            <Descriptions.Item label="KỲ CHỐT">
+              {pick(report, ["ky_chot", "KYCHOT"])}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày lập">
+              {formatDate(pick(report, ["ngay_lap", "NGAYLAP"]))}
+            </Descriptions.Item>
+          </Descriptions>
+
+          <Table
+            rowKey={(record) => `${pick(record, ["ma_yeu_cau", "MAYC"])}-${pick(record, ["stt", "STT"])}`}
+            columns={detailColumns}
+            dataSource={detail?.chi_tiet || []}
+            loading={detailLoading}
+            pagination={false}
+            scroll={{ x: 1000 }}
+            size="small"
+          />
+
+          <Descriptions bordered size="small" title="THONG KE" column={2}>
+            <Descriptions.Item label="TONG YEU CAU">
+              {pick(summary, ["tong_yeu_cau"], 0)}
+            </Descriptions.Item>
+            <Descriptions.Item label="YEU CAU DA GIAI QUYET">
+              {pick(summary, ["yeu_cau_da_giai_quyet"], 0)}
+            </Descriptions.Item>
+          </Descriptions>
+        </Space>
+      </Modal>
+    </>
+  );
 }
