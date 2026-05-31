@@ -44,11 +44,8 @@ class ThongBaoResponse(BaseModel):
 
 
 class ThongBaoFilter(BaseModel):
-    loai_thong_bao: Optional[str] = None
-    doi_tuong_nhan: Optional[str] = None
-    trang_thai: Optional[str] = None
-    keyword: Optional[str] = None
-    tu_ngay: Optional[datetime] = None
-    den_ngay: Optional[datetime] = None
+    loai_thong_bao: Optional[LoaiThongBao] = None
+    doi_tuong_nhan: Optional[DoiTuongNhanThongBao] = None
+    trang_thai: Optional[ThongBaoStatus] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)

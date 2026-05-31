@@ -291,6 +291,7 @@ export default function AccountListPage() {
     },
     {
       title: "Thao tác",
+      align: "right",
       render: (_, record) => {
         const isActive = pick(record, ["trang_thai", "TRANGTHAI"]) === "Hoạt động";
 
