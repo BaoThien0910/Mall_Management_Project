@@ -51,6 +51,7 @@ function getPremiseStatus(record) {
 export default function PremiseListPage() {
   const { role } = useAuth();
   const canWrite = [ROLE.TP_VHBT, ROLE.NV_VHBT].includes(role);
+  const isTenant = role === ROLE.KHACH_THUE;
 
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -366,14 +367,17 @@ export default function PremiseListPage() {
       <Row gutter={16}>
         {/* Cột 1: Trạng thái */}
         <Col span={8}>
-          <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '13px', color: '#111' }}>Trạng thái</div>
+          <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '13px', color: '#111' }}>
+            Trạng thái{isTenant ? " (Cố định)" : ""}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {MAT_BANG_STATUS.map(status => {
-              const checked = tempStatuses.includes(status);
+              const checked = isTenant ? status === "Còn trống" : tempStatuses.includes(status);
               return (
                 <Checkbox
                   key={status}
                   checked={checked}
+                  disabled={isTenant}
                   onChange={(e) => {
                     const next = e.target.checked
                       ? [...tempStatuses, status]
