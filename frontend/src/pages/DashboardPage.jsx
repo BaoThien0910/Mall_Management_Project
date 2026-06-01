@@ -10,6 +10,13 @@ import { dashboardService } from "../services/dashboardService";
 
 const { Text } = Typography;
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Chào buổi sáng";
+  if (hour >= 12 && hour < 18) return "Chào buổi chiều";
+  return "Chào buổi tối";
+};
+
 const actorActions = {
   [ROLE.QTV]: [
     ["Quản lý tài khoản", ROUTES.ACCOUNTS], ["Vai trò & quyền", ROUTES.RBAC], ["Nhật ký thao tác", ROUTES.AUDIT]
@@ -85,7 +92,7 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        title={isTenant ? "Cổng khách thuê" : `Chào buổi sáng, ${ROLE_LABEL[role] || "Người dùng"}`}
+        title={isTenant ? "Cổng khách thuê" : `${getGreeting()}, ${ROLE_LABEL[role] || "Người dùng"}`}
         subtitle={isTenant ? "Theo dõi hợp đồng, công nợ và yêu cầu hỗ trợ của bạn." : "Tình hình hoạt động trung tâm hôm nay."}
         breadcrumb={[isTenant ? "Trang chủ" : "Quản trị"]}
       />
