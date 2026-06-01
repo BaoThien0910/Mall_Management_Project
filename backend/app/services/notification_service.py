@@ -100,6 +100,12 @@ def list_announcements(
     """Liệt kê thông báo theo phạm vi người nhận."""
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = [_visibility_clause(current_user)]
+    if filters.keyword:
+        conditions.append(ThongBao.tieu_de.ilike(f"%{filters.keyword}%"))
+    if filters.ngay_tu:
+        conditions.append(func.date(ThongBao.ngay_ban_hanh) >= filters.ngay_tu)
+    if filters.ngay_den:
+        conditions.append(func.date(ThongBao.ngay_ban_hanh) <= filters.ngay_den)
     if filters.loai_thong_bao:
         conditions.append(ThongBao.loai_thong_bao == _enum_value(filters.loai_thong_bao))
     if filters.doi_tuong_nhan:

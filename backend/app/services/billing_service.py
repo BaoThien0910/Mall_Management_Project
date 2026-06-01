@@ -225,6 +225,7 @@ def list_debts(
     stmt = select(CongNo)
 
     ma_hop_dong = get_value(filters, ["ma_hop_dong", "ma_hd"], None) if filters else None
+    keyword = get_value(filters, ["keyword"], None) if filters else None
     thang = get_value(filters, ["thang"], None) if filters else None
     nam = get_value(filters, ["nam"], None) if filters else None
     trang_thai = get_value(filters, ["trang_thai"], None) if filters else None
@@ -232,7 +233,9 @@ def list_debts(
     page_size = get_value(filters, ["page_size"], 10) if filters else 10
 
     if ma_hop_dong:
-        stmt = stmt.where(get_column(CongNo, ["ma_hop_dong", "ma_hd"]) == ma_hop_dong)
+        stmt = stmt.where(get_column(CongNo, ["ma_hop_dong", "ma_hd"]).ilike(f"%{ma_hop_dong}%"))
+    if keyword:
+        stmt = stmt.where(get_column(CongNo, ["ma_hop_dong", "ma_hd"]).ilike(f"%{keyword}%"))
     if thang:
         stmt = stmt.where(CongNo.thang == thang)
     if nam:
@@ -283,12 +286,18 @@ def list_my_debts(
 
     stmt = select(CongNo).where(congno_mahd_col.in_(contract_ids))
 
+    ma_hop_dong = get_value(filters, ["ma_hop_dong"], None) if filters else None
+    keyword = get_value(filters, ["keyword"], None) if filters else None
     thang = get_value(filters, ["thang"], None) if filters else None
     nam = get_value(filters, ["nam"], None) if filters else None
     trang_thai = get_value(filters, ["trang_thai"], None) if filters else None
     page = get_value(filters, ["page"], 1) if filters else 1
     page_size = get_value(filters, ["page_size"], 10) if filters else 10
 
+    if ma_hop_dong:
+        stmt = stmt.where(congno_mahd_col.ilike(f"%{ma_hop_dong}%"))
+    if keyword:
+        stmt = stmt.where(congno_mahd_col.ilike(f"%{keyword}%"))
     if thang:
         stmt = stmt.where(CongNo.thang == thang)
     if nam:

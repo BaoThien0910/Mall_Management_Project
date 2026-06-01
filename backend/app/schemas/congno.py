@@ -14,6 +14,7 @@ class TinhCongNoThangRequest(BaseModel):
 
 class CongNoFilter(BaseModel):
     ma_hop_dong: Optional[str] = None
+    keyword: Optional[str] = None
     ma_khach_thue: Optional[str] = None
     thang: Optional[int] = Field(default=None, ge=1, le=12)
     nam: Optional[int] = Field(default=None, ge=2000, le=2100)
@@ -23,6 +24,8 @@ class CongNoFilter(BaseModel):
 
 
 class CongNoCuaToiFilter(BaseModel):
+    ma_hop_dong: Optional[str] = None
+    keyword: Optional[str] = None
     thang: Optional[int] = Field(default=None, ge=1, le=12)
     nam: Optional[int] = Field(default=None, ge=2000, le=2100)
     trang_thai: Optional[str] = None
