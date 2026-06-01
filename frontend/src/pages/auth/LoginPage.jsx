@@ -41,7 +41,6 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="login-hero">
-        <div className="system-status">● Trạng thái hệ thống: Ổn định</div>
       </div>
     </div>
   );
