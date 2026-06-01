@@ -310,6 +310,8 @@ def list_import_history(
     stmt = select(DuLieuImportTaiChinh)
 
     ma_hop_dong = get_value(filters, ["ma_hop_dong", "ma_hd"], None) if filters else None
+    keyword = get_value(filters, ["keyword"], None) if filters else None
+    loai_khoan = get_value(filters, ["loai_khoan"], None) if filters else None
     thang = get_value(filters, ["thang"], None) if filters else None
     nam = get_value(filters, ["nam"], None) if filters else None
     trang_thai = get_value(filters, ["trang_thai"], None) if filters else None
@@ -317,13 +319,17 @@ def list_import_history(
     page_size = get_value(filters, ["page_size"], 10) if filters else 10
 
     if ma_hop_dong:
-        stmt = stmt.where(get_column(DuLieuImportTaiChinh, ["ma_hop_dong", "ma_hd"]) == ma_hop_dong)
+        stmt = stmt.where(get_column(DuLieuImportTaiChinh, ["ma_hop_dong", "ma_hd"]).ilike(f"%{ma_hop_dong}%"))
+    if keyword:
+        stmt = stmt.where(get_column(DuLieuImportTaiChinh, ["ma_hop_dong", "ma_hd"]).ilike(f"%{keyword}%"))
+    if loai_khoan:
+        stmt = stmt.where(DuLieuImportTaiChinh.loai_khoan == (loai_khoan.value if hasattr(loai_khoan, "value") else loai_khoan))
     if thang:
         stmt = stmt.where(DuLieuImportTaiChinh.thang == thang)
     if nam:
         stmt = stmt.where(DuLieuImportTaiChinh.nam == nam)
     if trang_thai:
-        stmt = stmt.where(DuLieuImportTaiChinh.trang_thai == trang_thai)
+        stmt = stmt.where(DuLieuImportTaiChinh.trang_thai == (trang_thai.value if hasattr(trang_thai, "value") else trang_thai))
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     items = db.execute(

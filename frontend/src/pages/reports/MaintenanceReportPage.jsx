@@ -1,4 +1,4 @@
-import { DownloadOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { DownloadOutlined, EyeOutlined, PlusOutlined, FilterOutlined } from "@ant-design/icons";
 import {
   Button,
   Descriptions,
@@ -8,12 +8,14 @@ import {
   Space,
   Table,
   message,
+  Popover,
 } from "antd";
 import { useCallback, useState } from "react";
 
 import PageHeader from "../../components/common/PageHeader";
 import ResponsiveTable from "../../components/common/ResponsiveTable";
 import StatusTag from "../../components/common/StatusTag";
+import Toolbar from "../../components/common/Toolbar";
 import { ROLE } from "../../constants/roles";
 import { useAuth } from "../../hooks/useAuth";
 import { useCrudList } from "../../hooks/useCrudList";
@@ -46,11 +48,76 @@ export default function MaintenanceReportPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [form] = Form.useForm();
 
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState({
+    nam: undefined,
+  });
+  const [tempNam, setTempNam] = useState(undefined);
+
   const fetcher = useCallback((params) => maintenanceReportService.list(params), []);
-  const { items, loading, reload } = useCrudList(fetcher, {
+  const { items, loading, reload, setParams } = useCrudList(fetcher, {
     page: 1,
     page_size: 20,
   });
+
+  const handleApply = () => {
+    const nextFilters = {
+      nam: tempNam || undefined,
+    };
+    setAppliedFilters(nextFilters);
+
+    setParams({
+      nam: nextFilters.nam,
+      page: 1,
+      page_size: 20,
+    });
+    setPopoverOpen(false);
+  };
+
+  const handleCancel = () => {
+    setTempNam(appliedFilters.nam);
+    setPopoverOpen(false);
+  };
+
+  const handleReload = () => {
+    setAppliedFilters({
+      nam: undefined,
+    });
+    setTempNam(undefined);
+    setParams({
+      page: 1,
+      page_size: 20,
+    });
+    reload();
+  };
+
+  const activeFiltersCount = appliedFilters.nam ? 1 : 0;
+
+  const filterContent = (
+    <div style={{ padding: "8px", width: 250 }}>
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Năm</div>
+        <InputNumber
+          placeholder="Nhập năm (VD: 2026)"
+          value={tempNam}
+          onChange={setTempNam}
+          style={{ width: "100%" }}
+          min={2000}
+          max={2100}
+          precision={0}
+        />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button type="primary" danger onClick={handleCancel}>
+          Hủy
+        </Button>
+        <Button type="primary" onClick={handleApply}>
+          Áp dụng
+        </Button>
+      </div>
+    </div>
+  );
 
   const create = async () => {
     try {
@@ -159,6 +226,58 @@ export default function MaintenanceReportPage() {
         actionIcon={<PlusOutlined />}
         onAction={canCreate ? () => setCreateOpen(true) : undefined}
       />
+
+      <Toolbar
+        onReload={handleReload}
+        reloadAfterChildren
+      >
+        <Popover
+          content={filterContent}
+          trigger="click"
+          open={popoverOpen}
+          onOpenChange={(visible) => {
+            setPopoverOpen(visible);
+            if (!visible) {
+              handleCancel();
+            }
+          }}
+          placement="bottomLeft"
+          overlayStyle={{ zIndex: 1050 }}
+        >
+          <Button
+            type="primary"
+            icon={<FilterOutlined />}
+            style={{
+              minWidth: 100,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center" }}>Lọc</span>
+            {activeFiltersCount > 0 && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: "#fff",
+                  color: "#1677ff",
+                  borderRadius: "50%",
+                  width: "20px",
+                  height: "20px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: "1",
+                }}
+              >
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+        </Popover>
+      </Toolbar>
 
       <ResponsiveTable
         rowKey={(record) => getReportId(record)}

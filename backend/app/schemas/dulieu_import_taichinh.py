@@ -32,6 +32,8 @@ class DuLieuImportTaiChinhResponse(BaseModel):
 
 class DuLieuImportTaiChinhFilter(BaseModel):
     ma_hop_dong: Optional[str] = Field(default=None, max_length=20)
+    keyword: Optional[str] = None
+    loai_khoan: Optional[LoaiKhoanTaiChinh] = None
     thang: Optional[int] = None
     nam: Optional[int] = None
     trang_thai: Optional[DuLieuImportTaiChinhStatus] = None

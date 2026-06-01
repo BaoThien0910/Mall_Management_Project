@@ -217,6 +217,13 @@ body {
   color: #8c8c8c;
 }
 
+.app-breadcrumb .ant-breadcrumb-link,
+.app-breadcrumb .ant-breadcrumb-separator,
+.app-breadcrumb .ant-breadcrumb-link > span,
+.app-breadcrumb .ant-breadcrumb-link > a {
+  color: #8c8c8c !important;
+}
+
 .page-title {
   margin: 0 !important;
   font-size: 26px !important;

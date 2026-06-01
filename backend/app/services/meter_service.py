@@ -132,7 +132,7 @@ def list_meter_readings(
     page_size = get_value(filters, ["page_size"], 10) if filters else 10
 
     if ma_mat_bang:
-        stmt = stmt.where(get_column(ChiSoDienNuoc, ["ma_mat_bang", "ma_mb"]) == ma_mat_bang)
+        stmt = stmt.where(get_column(ChiSoDienNuoc, ["ma_mat_bang", "ma_mb"]).ilike(f"%{ma_mat_bang}%"))
     if thang:
         stmt = stmt.where(ChiSoDienNuoc.thang == thang)
     if nam:
