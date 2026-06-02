@@ -1,5 +1,6 @@
 import {
   CheckOutlined,
+  EditOutlined,
   FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -34,7 +35,7 @@ import { useCrudList } from "../../hooks/useCrudList";
 import { showApiError } from "../../services/apiClient";
 import { incidentService } from "../../services/maintenanceService";
 import { lookupService } from "../../services/lookupService";
-import { formatDate, pick, pickId, toArray } from "../../utils/data";
+import { formatDate, formatMoney, pick, pickId, toArray } from "../../utils/data";
 
 const REVIEW_OPTIONS = [
   { value: "DUYET", label: "Duyệt" },
@@ -75,6 +76,15 @@ export default function IncidentListPage() {
   const [open, setOpen] = useState(false);
   const [action, setAction] = useState(null);
   const [row, setRow] = useState(null);
+
+  const hasCostValue = (record) => {
+    const val = pick(record, ["chi_phi", "CHIPHI"]);
+    return val !== null && val !== undefined && val !== "";
+  };
+
+  const isCostReadOnly =
+    action === "cost" &&
+    (role === ROLE.TP_VHBT || hasCostValue(row));
   const [premises, setPremises] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedPremise, setSelectedPremise] = useState(null);
@@ -263,10 +273,20 @@ export default function IncidentListPage() {
 
     if (type === "assign") {
       initialValues.ma_nhan_vien_phan_cong = currentEmployeeId;
+      const workerId = pick(record, ["ma_nhan_vien_xu_ly", "MANV_XULY"]);
+      if (workerId) {
+        initialValues.ma_nhan_vien_xu_ly = workerId;
+        const found = employees.find((item) => getEmployeeId(item) === workerId);
+        setSelectedEmployee(found || null);
+      }
     }
 
     if (type === "result") {
       initialValues.ket_qua = INCIDENT_RESULT_OPTIONS[0].value;
+    }
+
+    if (type === "cost") {
+      initialValues.chi_phi = pick(record, ["chi_phi", "CHIPHI"]);
     }
 
     form.setFieldsValue(initialValues);
@@ -440,6 +460,7 @@ export default function IncidentListPage() {
     },
     {
       title: "Ngày gửi",
+      width: 130,
       render: (_, record) => formatDate(pick(record, ["ngay_gui", "NGAYGUI"])),
     },
     {
@@ -448,6 +469,53 @@ export default function IncidentListPage() {
         <StatusTag value={pick(record, ["trang_thai", "TRANGTHAI"])} />
       ),
     },
+    ...(role === ROLE.TP_VHBT
+      ? [
+          {
+            title: (
+              <span>
+                Mã NV
+                <br />
+                xử lý
+              </span>
+            ),
+            width: 110,
+            render: (_, record) => {
+              const val = pick(record, ["ma_nhan_vien_xu_ly", "MANV_XULY"]);
+              const status = pick(record, ["trang_thai", "TRANGTHAI"]);
+              const canReassign = ["Đã duyệt", "Đang xử lý"].includes(status);
+              if (!val) return "-";
+              return (
+                <Space size={4}>
+                  <span>{val}</span>
+                  {canReassign ? (
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EditOutlined />}
+                      style={{ padding: 0 }}
+                      onClick={() => openAction("assign", record)}
+                    />
+                  ) : null}
+                </Space>
+              );
+            },
+          },
+        ]
+      : []),
+    ...(role === ROLE.KHACH_THUE
+      ? [
+          {
+            title: "Chi phí",
+            render: (_, record) => {
+              const val = pick(record, ["chi_phi", "CHIPHI"]);
+              return val !== null && val !== undefined && val !== ""
+                ? formatMoney(val)
+                : "-";
+            },
+          },
+        ]
+      : []),
     {
       title: "Thao tác",
       render: (_, record) => {
@@ -465,7 +533,7 @@ export default function IncidentListPage() {
               </Button>
             ) : null}
 
-            {isMaintenanceLeader && status === "Đã duyệt" ? (
+            {isMaintenanceLeader && status === "Đã duyệt" && !pick(record, ["ma_nhan_vien_xu_ly", "MANV_XULY"]) ? (
               <Button
                 size="small"
                 icon={<UserAddOutlined />}
@@ -662,13 +730,18 @@ export default function IncidentListPage() {
       />
 
       <Modal
-        title={modalTitle}
+        title={isCostReadOnly ? "Xem chi phí" : modalTitle}
         open={open}
         onCancel={() => setOpen(false)}
         onOk={submit}
         destroyOnClose
         okText="Lưu"
         cancelText="Hủy"
+        footer={
+          isCostReadOnly ? (
+            <Button onClick={() => setOpen(false)}>Đóng</Button>
+          ) : undefined
+        }
       >
         {renderIncidentSummary()}
 
@@ -772,12 +845,13 @@ export default function IncidentListPage() {
             <Form.Item
               name="chi_phi"
               label="Chi phí"
-              rules={[{ required: true, message: "Vui lòng nhập chi phí" }]}
+              rules={[{ required: !isCostReadOnly, message: "Vui lòng nhập chi phí" }]}
             >
               <InputNumber
                 min={0}
                 style={{ width: "100%" }}
                 placeholder="Nhập chi phí"
+                disabled={isCostReadOnly}
               />
             </Form.Item>
           ) : null}

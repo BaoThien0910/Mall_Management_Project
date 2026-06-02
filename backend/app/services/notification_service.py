@@ -100,6 +100,11 @@ def list_announcements(
     """Liệt kê thông báo theo phạm vi người nhận."""
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = [_visibility_clause(current_user)]
+
+    role = _role_value(current_user)
+    if role not in [RoleCode.QTV.value, RoleCode.BQL.value]:
+        conditions.append(ThongBao.trang_thai != ThongBaoStatus.DA_THU_HOI.value)
+
     if filters.keyword:
         conditions.append(ThongBao.tieu_de.ilike(f"%{filters.keyword}%"))
     if filters.ngay_tu:
@@ -148,6 +153,10 @@ def get_announcement_detail(
         raise NotFoundException("Không tìm thấy thông báo")
     if not _can_view_announcement(announcement, current_user):
         raise ForbiddenException("Người dùng không thuộc nhóm được xem thông báo")
+    if announcement.trang_thai == ThongBaoStatus.DA_THU_HOI.value:
+        role = _role_value(current_user)
+        if role not in [RoleCode.QTV.value, RoleCode.BQL.value]:
+            raise ForbiddenException("Thông báo đã bị thu hồi")
     return announcement
 
 

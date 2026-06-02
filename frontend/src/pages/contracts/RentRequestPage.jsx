@@ -1,6 +1,7 @@
 import { CheckOutlined, CloseOutlined, PlusOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Button,
+  Checkbox,
   Descriptions,
   Form,
   Input,
@@ -53,7 +54,7 @@ export default function RentRequestPage() {
 
   const [tempNgayGuiTu, setTempNgayGuiTu] = useState("");
   const [tempNgayGuiDen, setTempNgayGuiDen] = useState("");
-  const [tempTrangThai, setTempTrangThai] = useState(undefined);
+  const [tempTrangThaiList, setTempTrangThaiList] = useState([]);
 
   const fetcher = useCallback(
     (params) => (isTenant ? rentRequestService.myRequests(params) : rentRequestService.list(params)),
@@ -86,8 +87,9 @@ export default function RentRequestPage() {
   };
 
   const handleApply = () => {
+    const statusVal = tempTrangThaiList.length ? tempTrangThaiList.join(",") : undefined;
     const nextFilters = {
-      trang_thai: tempTrangThai,
+      trang_thai: statusVal,
       ngay_gui_tu: tempNgayGuiTu,
       ngay_gui_den: tempNgayGuiDen,
     };
@@ -112,14 +114,14 @@ export default function RentRequestPage() {
   const handleCancel = () => {
     setTempNgayGuiTu(appliedFilters.ngay_gui_tu || "");
     setTempNgayGuiDen(appliedFilters.ngay_gui_den || "");
-    setTempTrangThai(appliedFilters.trang_thai);
+    setTempTrangThaiList(appliedFilters.trang_thai ? appliedFilters.trang_thai.split(",") : []);
     setPopoverOpen(false);
   };
 
   const handleClearFilters = () => {
     setTempNgayGuiTu("");
     setTempNgayGuiDen("");
-    setTempTrangThai(undefined);
+    setTempTrangThaiList([]);
 
     setAppliedFilters({
       trang_thai: undefined,
@@ -145,7 +147,7 @@ export default function RentRequestPage() {
     setAppliedFilters(cleared);
     setTempNgayGuiTu("");
     setTempNgayGuiDen("");
-    setTempTrangThai(undefined);
+    setTempTrangThaiList([]);
     setParams({
       page: 1,
       page_size: 20,
@@ -158,48 +160,63 @@ export default function RentRequestPage() {
     (appliedFilters.ngay_gui_tu ? 1 : 0) +
     (appliedFilters.ngay_gui_den ? 1 : 0);
 
+  const renderStatusCheckbox = (status) => {
+    const checked = tempTrangThaiList.includes(status);
+    return (
+      <Checkbox
+        key={status}
+        checked={checked}
+        onChange={(e) => {
+          const next = e.target.checked
+            ? [...tempTrangThaiList, status]
+            : tempTrangThaiList.filter((s) => s !== status);
+          setTempTrangThaiList(next);
+        }}
+      >
+        {status}
+      </Checkbox>
+    );
+  };
+
   const filterContent = (
-    <div style={{ padding: "8px", width: 320 }}>
+    <div style={{ padding: "8px", width: 440 }}>
       {/* Ngày gửi */}
       <div style={{ marginBottom: "16px" }}>
         <div style={{ fontWeight: 600, marginBottom: "8px" }}>Ngày gửi</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ color: "#555", width: "40px" }}>Từ:</span>
-            <DatePicker
-              value={tempNgayGuiTu ? dayjs(tempNgayGuiTu) : null}
-              onChange={(date) => setTempNgayGuiTu(date ? dayjs(date).format("YYYY-MM-DD") : "")}
-              format="DD/MM/YYYY"
-              placeholder="Từ ngày"
-              style={{ width: "100%" }}
-              allowClear={false}
-            />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ color: "#555", width: "40px" }}>Đến:</span>
-            <DatePicker
-              value={tempNgayGuiDen ? dayjs(tempNgayGuiDen) : null}
-              onChange={(date) => setTempNgayGuiDen(date ? dayjs(date).format("YYYY-MM-DD") : "")}
-              format="DD/MM/YYYY"
-              placeholder="Đến ngày"
-              style={{ width: "100%" }}
-              allowClear={false}
-            />
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ color: "#555" }}>From:</span>
+          <DatePicker
+            value={tempNgayGuiTu ? dayjs(tempNgayGuiTu) : null}
+            onChange={(date) => setTempNgayGuiTu(date ? dayjs(date).format("YYYY-MM-DD") : "")}
+            format="DD/MM/YYYY"
+            placeholder="Từ ngày"
+            style={{ width: "100%" }}
+            allowClear={false}
+          />
+          <span style={{ color: "#bfbfbf" }}>-</span>
+          <span style={{ color: "#555" }}>To:</span>
+          <DatePicker
+            value={tempNgayGuiDen ? dayjs(tempNgayGuiDen) : null}
+            onChange={(date) => setTempNgayGuiDen(date ? dayjs(date).format("YYYY-MM-DD") : "")}
+            format="DD/MM/YYYY"
+            placeholder="Đến ngày"
+            style={{ width: "100%" }}
+            allowClear={false}
+          />
         </div>
       </div>
 
       {/* Trạng thái */}
       <div style={{ marginBottom: "20px" }}>
         <div style={{ fontWeight: 600, marginBottom: "8px" }}>Trạng thái</div>
-        <Select
-          placeholder="Chọn trạng thái"
-          value={tempTrangThai || undefined}
-          onChange={setTempTrangThai}
-          style={{ width: "100%" }}
-          allowClear
-          options={YEU_CAU_THUE_THEM_STATUS.map((item) => ({ value: item, label: item }))}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+            {["Chờ duyệt", "Từ chối", "Đã tạo hợp đồng"].map(renderStatusCheckbox)}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+            {["Đã duyệt - Chờ số hóa hợp đồng"].map(renderStatusCheckbox)}
+          </div>
+        </div>
       </div>
 
       {/* Footer */}
@@ -367,6 +384,7 @@ export default function RentRequestPage() {
       >
         <Popover
           content={filterContent}
+          title="Bộ lọc"
           trigger="click"
           open={popoverOpen}
           onOpenChange={(visible) => {

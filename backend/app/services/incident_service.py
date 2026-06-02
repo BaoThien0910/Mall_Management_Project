@@ -199,14 +199,14 @@ def assign_incident(
     payload: PhanCongSuCoBaoTriRequest,
     current_user: Any,
 ) -> SuCoBaoTri:
-    """Phân công sự cố đã duyệt cho nhân viên Vận hành - Bảo trì."""
+    """Phân công sự cố đã duyệt hoặc đang xử lý cho nhân viên Vận hành - Bảo trì."""
     incident = db.execute(
         select(SuCoBaoTri).where(SuCoBaoTri.ma_su_co == ma_su_co)
     ).scalars().first()
     if incident is None:
         raise NotFoundException("Không tìm thấy sự cố bảo trì")
-    if incident.trang_thai != SuCoBaoTriStatus.DA_DUYET.value:
-        raise InvalidStateException("Chỉ sự cố đã duyệt mới được phân công")
+    if incident.trang_thai not in {SuCoBaoTriStatus.DA_DUYET.value, SuCoBaoTriStatus.DANG_XU_LY.value}:
+        raise InvalidStateException("Chỉ sự cố đã duyệt hoặc đang xử lý mới được phân công")
 
     assignee = db.execute(
         select(NhanVien).where(NhanVien.ma_nhan_vien == payload.ma_nhan_vien_xu_ly)
@@ -225,7 +225,8 @@ def assign_incident(
         incident.ma_nhan_vien_phan_cong = ma_nhan_vien_phan_cong
         incident.ma_nhan_vien_xu_ly = payload.ma_nhan_vien_xu_ly
         incident.ngay_phan_cong = current_datetime()
-        incident.trang_thai = SuCoBaoTriStatus.DANG_XU_LY.value
+        if incident.trang_thai == SuCoBaoTriStatus.DA_DUYET.value:
+            incident.trang_thai = SuCoBaoTriStatus.DANG_XU_LY.value
         write_audit_log(
             db=db,
             ma_tk=actor_ma_tk,

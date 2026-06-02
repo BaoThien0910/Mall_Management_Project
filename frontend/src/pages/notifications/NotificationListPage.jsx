@@ -270,17 +270,26 @@ export default function NotificationListPage() {
     }
   };
 
-  const revoke = async (row) => {
-    try {
-      await notificationService.revoke(
-        pickId(row, ["ma_thong_bao", "ma_tb", "MATB"]),
-        { ly_do: "Thu hồi từ giao diện quản lý" },
-      );
-      message.success("Đã thu hồi thông báo");
-      reload();
-    } catch (error) {
-      showApiError(error);
-    }
+  const revoke = (row) => {
+    Modal.confirm({
+      title: "Xác nhận thu hồi thông báo",
+      content: "Bạn có chắc chắn muốn thu hồi thông báo này không? Các tài khoản khác sẽ không thể nhìn thấy thông báo này nữa.",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await notificationService.revoke(
+            pickId(row, ["ma_thong_bao", "ma_tb", "MATB"]),
+            { ly_do: "Thu hồi từ giao diện quản lý" },
+          );
+          message.success("Đã thu hồi thông báo");
+          reload();
+        } catch (error) {
+          showApiError(error);
+        }
+      },
+    });
   };
 
   const viewDetail = async (row) => {
@@ -319,19 +328,25 @@ export default function NotificationListPage() {
     },
     {
       title: "Thao tác",
-      align: "right",
-      render: (_, record) => (
-        <Space>
-          <Button type="link" onClick={() => viewDetail(record)}>
-            Xem nội dung
-          </Button>
-          {canCreate && pick(record, ["trang_thai", "TRANGTHAI"]) === "Đã ban hành" ? (
-            <Button danger type="link" onClick={() => revoke(record)}>
-              Thu hồi
-            </Button>
-          ) : null}
-        </Space>
-      ),
+      align: "left",
+      render: (_, record) => {
+        const trangThai = pick(record, ["trang_thai", "TRANGTHAI"]);
+        const canView = trangThai !== "Đã thu hồi" || role === ROLE.BQL || role === ROLE.QTV;
+        return (
+          <Space>
+            {canView ? (
+              <Button type="link" onClick={() => viewDetail(record)}>
+                Xem nội dung
+              </Button>
+            ) : null}
+            {canCreate && trangThai === "Đã ban hành" ? (
+              <Button danger type="link" onClick={() => revoke(record)}>
+                Thu hồi
+              </Button>
+            ) : null}
+          </Space>
+        );
+      },
     },
   ];
 
