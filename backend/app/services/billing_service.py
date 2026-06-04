@@ -12,11 +12,52 @@ from app.models.chisodiennuoc import ChiSoDienNuoc
 from app.models.congno import CongNo
 from app.models.dulieu_import_taichinh import DuLieuImportTaiChinh
 from app.models.hopdong import HopDong
+from app.models.sk_baotri import SuCoBaoTri
 from app.services._common import generate_code, get_column, get_value
 
 
 def _to_decimal(value: Any) -> Decimal:
     return Decimal(str(value or 0))
+
+
+
+def _month_bounds(thang: int, nam: int) -> tuple[date, date]:
+    """Trả về khoảng ngày [ngày đầu tháng, ngày đầu tháng kế tiếp)."""
+    start_date = date(nam, thang, 1)
+    if thang == 12:
+        end_date = date(nam + 1, 1, 1)
+    else:
+        end_date = date(nam, thang + 1, 1)
+    return start_date, end_date
+
+
+def _sum_completed_incident_cost(
+    db: Session,
+    ma_mat_bang: str,
+    thang: int,
+    nam: int,
+) -> Decimal:
+    """
+    Tính tổng chi phí xử lý sự cố đã hoàn thành của một mặt bằng trong kỳ.
+
+    Chi phí này được cộng vào CONGNO.PHIBAOTRI để không phải đổi schema DB.
+    Nếu không có sự cố hoặc sự cố không có chi phí, hàm trả về 0.
+    """
+    start_date, end_date = _month_bounds(thang, nam)
+
+    total = db.execute(
+        select(func.coalesce(func.sum(SuCoBaoTri.chi_phi), 0)).where(
+            SuCoBaoTri.ma_mat_bang == ma_mat_bang,
+            SuCoBaoTri.trang_thai == "Hoàn thành",
+            SuCoBaoTri.ngay_hoan_thanh >= start_date,
+            SuCoBaoTri.ngay_hoan_thanh < end_date,
+            SuCoBaoTri.chi_phi.is_not(None),
+            SuCoBaoTri.chi_phi > 0,
+        )
+    ).scalar_one()
+
+    return _to_decimal(total)
+
 
 
 def _current_customer_id(current_user: Any) -> Optional[str]:
@@ -51,6 +92,7 @@ def calculate_monthly_debts(
     Nguồn tiền:
     - Tiền thuê, phí bảo trì, hoàn trả: DULIEU_IMPORT_TAICHINH theo MAHD.
     - Tiền điện, tiền nước: CHISODIENNUOC theo MAMB của hợp đồng.
+    - Chi phí xử lý sự cố hoàn thành: SK_BAOTRI.CHIPHI theo MAMB.
     """
     thang = get_value(payload, ["thang"])
     nam = get_value(payload, ["nam"])
@@ -166,6 +208,18 @@ def calculate_monthly_debts(
 
             tien_dien = _to_decimal(get_value(meter, ["tien_dien"], 0))
             tien_nuoc = _to_decimal(get_value(meter, ["tien_nuoc"], 0))
+
+            # Chi phí xử lý sự cố bảo trì là khoản phát sinh linh động.
+            # Nếu trong kỳ không có sự cố hoàn thành hoặc CHIPHI = NULL/0,
+            # hàm bên dưới trả về 0 và công nợ vẫn tính bình thường.
+            chi_phi_su_co = _sum_completed_incident_cost(
+                db=db,
+                ma_mat_bang=ma_mat_bang,
+                thang=thang,
+                nam=nam,
+            )
+            phi_bao_tri += chi_phi_su_co
+
             tong_tien = tien_thue + tien_dien + tien_nuoc + phi_bao_tri - tien_hoan
 
             if tong_tien < 0:
