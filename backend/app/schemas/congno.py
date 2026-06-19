@@ -1,36 +1,63 @@
 # File: app/schemas/congno.py
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-from app.constants.statuses import CongNoStatus
-from app.utils.validators import validate_month, validate_year
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TinhCongNoThangRequest(BaseModel):
+    thang: int = Field(..., ge=1, le=12)
+    nam: int = Field(..., ge=2000, le=2100)
+    han_thanh_toan: Optional[date] = None
+
+
+class CongNoFilter(BaseModel):
+    ma_hop_dong: Optional[str] = None
+    keyword: Optional[str] = None
+    ma_khach_thue: Optional[str] = None
+    thang: Optional[int] = Field(default=None, ge=1, le=12)
+    nam: Optional[int] = Field(default=None, ge=2000, le=2100)
+    trang_thai: Optional[str] = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=10, ge=1, le=100)
+
+
+class CongNoCuaToiFilter(BaseModel):
+    ma_hop_dong: Optional[str] = None
+    keyword: Optional[str] = None
+    thang: Optional[int] = Field(default=None, ge=1, le=12)
+    nam: Optional[int] = Field(default=None, ge=2000, le=2100)
+    trang_thai: Optional[str] = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=10, ge=1, le=100)
+
+
+class ThieuChiSoDienNuocItem(BaseModel):
+    ma_hop_dong: str
+    ma_mat_bang: str
+    ly_do: str
+
+
+class ThieuDuLieuImportItem(BaseModel):
+    ma_hop_dong: str
+    ly_do: str
+
+
+class TinhCongNoThangResponse(BaseModel):
     thang: int
     nam: int
-
-    @field_validator("thang")
-    @classmethod
-    def validate_month_value(cls, value: int) -> int:
-        if not validate_month(value):
-            raise ValueError("Tháng phải nằm trong khoảng 1 đến 12.")
-        return value
-
-    @field_validator("nam")
-    @classmethod
-    def validate_year_value(cls, value: int) -> int:
-        if not validate_year(value):
-            raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
-        return value
+    so_cong_no_da_tao: int
+    so_cong_no_bo_qua: int
+    so_hop_dong_thieu_chi_so: int
+    so_hop_dong_thieu_du_lieu: int
+    danh_sach_ma_cn: List[str]
+    danh_sach_ma_hd_bo_qua: List[str]
+    danh_sach_thieu_chi_so: List[ThieuChiSoDienNuocItem]
+    danh_sach_thieu_du_lieu: List[ThieuDuLieuImportItem]
 
 
 class CongNoResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     ma_cong_no: str
     ma_hop_dong: str
     thang: int
@@ -41,52 +68,8 @@ class CongNoResponse(BaseModel):
     phi_bao_tri: Decimal
     tien_hoan: Decimal
     tong_tien: Decimal
-    han_thanh_toan: Optional[date] = None
-    trang_thai: CongNoStatus
+    han_thanh_toan: Optional[date]
+    trang_thai: str
     ngay_lap: datetime
 
-
-class CongNoFilter(BaseModel):
-    ma_hop_dong: Optional[str] = Field(default=None, max_length=20)
-    thang: Optional[int] = None
-    nam: Optional[int] = None
-    trang_thai: Optional[CongNoStatus] = None
-    page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=10, ge=1, le=100)
-
-    @field_validator("thang")
-    @classmethod
-    def validate_optional_month(cls, value: Optional[int]) -> Optional[int]:
-        if value is not None and not validate_month(value):
-            raise ValueError("Tháng phải nằm trong khoảng 1 đến 12.")
-        return value
-
-    @field_validator("nam")
-    @classmethod
-    def validate_optional_year(cls, value: Optional[int]) -> Optional[int]:
-        if value is not None and not validate_year(value):
-            raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
-        return value
-
-
-class CongNoCuaToiFilter(BaseModel):
-    ma_hop_dong: Optional[str] = Field(default=None, max_length=20)
-    thang: Optional[int] = None
-    nam: Optional[int] = None
-    trang_thai: Optional[CongNoStatus] = None
-    page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=10, ge=1, le=100)
-
-    @field_validator("thang")
-    @classmethod
-    def validate_optional_month(cls, value: Optional[int]) -> Optional[int]:
-        if value is not None and not validate_month(value):
-            raise ValueError("Tháng phải nằm trong khoảng 1 đến 12.")
-        return value
-
-    @field_validator("nam")
-    @classmethod
-    def validate_optional_year(cls, value: Optional[int]) -> Optional[int]:
-        if value is not None and not validate_year(value):
-            raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
-        return value
+    model_config = ConfigDict(from_attributes=True)

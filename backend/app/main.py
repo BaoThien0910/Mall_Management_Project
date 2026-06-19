@@ -24,12 +24,12 @@ from app.routers import (
     import_taichinh,
     baocaotaichinh,
     sk_baotri,
-    lichbt,
     baocaobaotri,
     thongbao,
     nhatky,
+    dashboard,
+    lookup,
 )
-
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -66,18 +66,17 @@ app.include_router(thanh_toan.router, prefix=settings.API_V1_PREFIX)
 app.include_router(import_taichinh.router, prefix=settings.API_V1_PREFIX)
 app.include_router(baocaotaichinh.router, prefix=settings.API_V1_PREFIX)
 app.include_router(sk_baotri.router, prefix=settings.API_V1_PREFIX)
-app.include_router(lichbt.router, prefix=settings.API_V1_PREFIX)
 app.include_router(baocaobaotri.router, prefix=settings.API_V1_PREFIX)
 app.include_router(thongbao.router, prefix=settings.API_V1_PREFIX)
 app.include_router(nhatky.router, prefix=settings.API_V1_PREFIX)
+app.include_router(dashboard.router, prefix=settings.API_V1_PREFIX)
+app.include_router(lookup.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")
 def root() -> Dict[str, str]:
     """Endpoint gốc kiểm tra ứng dụng đang hoạt động."""
-    return {
-        "message": "Trung tâm thương mại API đang hoạt động",
-    }
+    return {"message": "Trung tâm thương mại API đang hoạt động"}
 
 
 @app.get("/health")

@@ -1,105 +1,162 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Spin, message } from "antd";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 
-import LoginPage from './pages/auth/LoginPage';
-import UnauthorizedPage from './pages/UnauthorizedPage';
-import AccountManagementPage from './pages/system/AccountManagementPage';
-import AuditLogPage from './pages/system/AuditLogPage';
-import DebtListPage from './pages/finance/DebtListPage';
-import DebtDetailPage from './pages/finance/DebtDetailPage';
-import PaymentPage from './pages/finance/PaymentPage';
-import PaymentResultPage from './pages/finance/PaymentResultPage';
-import InvoiceHistoryPage from './pages/finance/InvoiceHistoryPage';
-import FinancialImportPage from './pages/finance/FinancialImportPage';
-import MaintenanceDashboard from './pages/maintenance/MaintenanceDashboard';
-import MaintenanceDetailPage from './pages/maintenance/MaintenanceDetailPage';
-import CreateMaintenanceRequest from './pages/maintenance/CreateMaintenanceRequest';
-import MaintenanceScheduleCalendar from './pages/maintenance/MaintenanceScheduleCalendar';
-import ReportsDashboard from './pages/reports/ReportsDashboard';
-import AnnouncementsPage from './pages/notifications/AnnouncementsPage';
-import ComingSoonPage from './pages/placeholders/ComingSoonPage';
-import ProtectedRoute from './components/common/ProtectedRoute';
-import AdminLayout from './layouts/AdminLayout';
-import TenantLayout from './layouts/TenantLayout';
-import StaffLayout from './layouts/StaffLayout';
-import ManagementLayout from './layouts/ManagementLayout';
-import DashboardPage from './pages/DashboardPage';
+import AppShell from "./layouts/AppShell";
+import { bootstrapAuth, logoutLocal } from "./store/authSlice";
+import { routePermissions, ROUTES } from "./constants/routes";
+import { parseJwt } from "./utils/storage";
+import { registerLogoutCallback } from "./services/apiClient";
+
+import LoginPage from "./pages/auth/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import AccountListPage from "./pages/system/AccountListPage";
+import RbacPage from "./pages/system/RbacPage";
+import AuditLogPage from "./pages/system/AuditLogPage";
+import PremiseListPage from "./pages/premises/PremiseListPage";
+import ContractListPage from "./pages/contracts/ContractListPage";
+import MyContractsPage from "./pages/contracts/MyContractsPage";
+import RentRequestPage from "./pages/contracts/RentRequestPage";
+import DebtListPage from "./pages/finance/DebtListPage";
+import MyDebtListPage from "./pages/finance/MyDebtListPage";
+import PaymentPage from "./pages/finance/PaymentPage";
+import FinancialImportPage from "./pages/finance/FinancialImportPage";
+import FinancialReportPage from "./pages/reports/FinancialReportPage";
+import IncidentListPage from "./pages/maintenance/IncidentListPage";
+import MeterReadingPage from "./pages/maintenance/MeterReadingPage";
+import MaintenanceReportPage from "./pages/reports/MaintenanceReportPage";
+import NotificationListPage from "./pages/notifications/NotificationListPage";
+
+function AuthBootstrap({ children }) {
+  const dispatch = useDispatch();
+  const { bootstrapped, loading, token } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    dispatch(bootstrapAuth());
+  }, [dispatch]);
+
+  useEffect(() => {
+    registerLogoutCallback(() => {
+      dispatch(logoutLocal());
+      message.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+
+    const payload = parseJwt(token);
+    if (!payload?.exp) return undefined;
+
+    const delay = payload.exp * 1000 - Date.now();
+    if (delay <= 0) {
+      dispatch(logoutLocal());
+      message.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      dispatch(logoutLocal());
+      message.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [token, dispatch]);
+
+  if (!bootstrapped && loading) {
+    return <Spin fullscreen tip="Đang khởi tạo phiên đăng nhập..." />;
+  }
+
+  return children;
+}
+
+function getCurrentRole(user) {
+  return (
+    user?.ma_vai_tro ||
+    user?.maVaiTro ||
+    user?.mavaitro ||
+    user?.role ||
+    user?.vai_tro ||
+    user?.tai_khoan?.ma_vai_tro ||
+    user?.taiKhoan?.ma_vai_tro
+  );
+}
+
+function ProtectedRoute({ allowedRoles }) {
+  const { token, user, bootstrapped } = useSelector((state) => state.auth);
+  const location = useLocation();
+
+  if (!bootstrapped) {
+    return <Spin fullscreen tip="Đang kiểm tra phiên đăng nhập..." />;
+  }
+
+  if (!token || !user) {
+    return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
+  }
+
+  const role = getCurrentRole(user);
+  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  }
+
+  return <AppShell />;
+}
+
+function PublicLoginRoute() {
+  const { token, user } = useSelector((state) => state.auth);
+  if (token && user) return <Navigate to={ROUTES.DASHBOARD} replace />;
+  return <LoginPage />;
+}
+
+function protectedRoute(route, element) {
+  return (
+    <Route element={<ProtectedRoute allowedRoles={routePermissions[route]} />}>
+      <Route path={route} element={element} />
+    </Route>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path={ROUTES.LOGIN} element={<PublicLoginRoute />} />
+
+      {protectedRoute(ROUTES.DASHBOARD, <DashboardPage />)}
+      {protectedRoute(ROUTES.ACCOUNTS, <AccountListPage />)}
+      {protectedRoute(ROUTES.RBAC, <RbacPage />)}
+      {protectedRoute(ROUTES.AUDIT, <AuditLogPage />)}
+      {protectedRoute(ROUTES.PREMISES, <PremiseListPage />)}
+      {protectedRoute(ROUTES.CONTRACTS, <ContractListPage />)}
+      {protectedRoute(ROUTES.MY_CONTRACTS, <MyContractsPage />)}
+      {protectedRoute(ROUTES.RENT_REQUESTS, <RentRequestPage />)}
+      {protectedRoute(ROUTES.DEBTS, <DebtListPage />)}
+      {protectedRoute(ROUTES.MY_DEBTS, <MyDebtListPage />)}
+      {protectedRoute(ROUTES.PAYMENT, <PaymentPage />)}
+      {protectedRoute(ROUTES.FINANCIAL_IMPORT, <FinancialImportPage />)}
+      {protectedRoute(ROUTES.FINANCIAL_REPORTS, <FinancialReportPage />)}
+      {protectedRoute(ROUTES.METER_READINGS, <MeterReadingPage />)}
+      {protectedRoute(ROUTES.INCIDENTS, <IncidentListPage />)}
+      {protectedRoute(ROUTES.MAINTENANCE_REPORTS, <MaintenanceReportPage />)}
+      {protectedRoute(ROUTES.NOTIFICATIONS, <NotificationListPage />)}
+
+      <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+    </Routes>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-
-        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="accounts" element={<AccountManagementPage />} />
-            <Route path="logs" element={<AuditLogPage />} />
-          </Route>
-        </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={['tenant']} />}>
-          <Route path="/tenant" element={<TenantLayout />}>
-            <Route
-              index
-              element={<ComingSoonPage title="Trang chủ khách thuê" description="Tổng quan gian hàng và thông báo." />}
-            />
-            <Route
-              path="contract"
-              element={<ComingSoonPage title="Hợp đồng của tôi" description="Xem và tải hợp đồng thuê mặt bằng." />}
-            />
-            <Route path="billing" element={<DebtListPage />} />
-            <Route path="billing/invoices" element={<InvoiceHistoryPage />} />
-            <Route path="billing/pay/result" element={<PaymentResultPage />} />
-            <Route path="billing/pay/:id" element={<PaymentPage />} />
-            <Route path="billing/:id" element={<DebtDetailPage />} />
-            <Route path="maintenance" element={<MaintenanceDashboard />} />
-            <Route path="maintenance/new" element={<CreateMaintenanceRequest />} />
-            <Route path="maintenance/:id" element={<MaintenanceDetailPage />} />
-            <Route path="maintenance/schedule/calendar" element={<MaintenanceScheduleCalendar />} />
-          </Route>
-        </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
-          <Route path="/staff" element={<StaffLayout />}>
-            <Route
-              index
-              element={<ComingSoonPage title="Bàn làm việc nhân viên" description="Việc cần làm và thông báo nội bộ." />}
-            />
-            <Route
-              path="premises"
-              element={<ComingSoonPage title="Quản lý mặt bằng" description="Danh mục mặt bằng, trạng thái và chỉ số." />}
-            />
-            <Route
-              path="contracts"
-              element={<ComingSoonPage title="Quản lý hợp đồng" description="Số hóa hợp đồng, trạng thái và phụ lục." />}
-            />
-            <Route path="finance" element={<DebtListPage />} />
-            <Route path="finance/import" element={<FinancialImportPage />} />
-            <Route path="finance/invoices" element={<InvoiceHistoryPage />} />
-            <Route path="finance/:id" element={<DebtDetailPage />} />
-            <Route path="maintenance" element={<MaintenanceDashboard />} />
-            <Route path="maintenance/new" element={<CreateMaintenanceRequest />} />
-            <Route path="maintenance/:id" element={<MaintenanceDetailPage />} />
-            <Route path="maintenance/schedule/calendar" element={<MaintenanceScheduleCalendar />} />
-          </Route>
-        </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={['management']} />}>
-          <Route path="/management" element={<ManagementLayout />}>
-            <Route
-              index
-              element={<ComingSoonPage title="Ban quản lý" description="Dashboard phê duyệt và ra quyết định." />}
-            />
-            <Route path="approvals" element={<ComingSoonPage title="Phê duyệt yêu cầu" description="Thuê thêm, sự cố và các quyết định." />} />
-            <Route path="reports" element={<ReportsDashboard />} />
-            <Route path="announcements" element={<AnnouncementsPage />} />
-          </Route>
-        </Route>
-
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AuthBootstrap>
+        <AppRoutes />
+      </AuthBootstrap>
     </BrowserRouter>
   );
 }

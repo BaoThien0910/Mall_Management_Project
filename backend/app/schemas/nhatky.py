@@ -23,7 +23,7 @@ class NhatKyResponse(BaseModel):
 
 
 class NhatKyFilter(BaseModel):
-    ma_tai_khoan: Optional[str] = Field(default=None, max_length=20)
+    ma_tai_khoan: Optional[str] = Field(default=None, max_length=50)
     hanh_dong: Optional[AuditAction] = None
     doi_tuong: Optional[str] = Field(default=None, max_length=100)
     tu_ngay: Optional[datetime] = None

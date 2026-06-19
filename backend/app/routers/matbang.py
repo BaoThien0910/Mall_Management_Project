@@ -1,4 +1,5 @@
 # File: app/routers/matbang.py
+
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, status
@@ -10,11 +11,11 @@ from app.dependencies import require_roles
 from app.schemas.matbang import (
     MatBangCreate,
     MatBangFilter,
+    MatBangTrangThaiBaoTriUpdate,
     MatBangUpdate,
 )
 from app.services import premise_service
 from app.utils.response import success_response
-
 
 router = APIRouter(
     prefix="/mat-bang",
@@ -81,6 +82,29 @@ def create_premise(
     )
     return success_response(
         message="Tạo mặt bằng thành công",
+        data=result,
+    )
+
+
+@router.patch(
+    "/{ma_mb}/trang-thai-bao-tri",
+    status_code=status.HTTP_200_OK,
+    response_model=Dict[str, Any],
+)
+def update_maintenance_status(
+    ma_mb: str,
+    payload: MatBangTrangThaiBaoTriUpdate,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(require_roles(list(VHBT_ROLES))),
+) -> Dict[str, Any]:
+    result = premise_service.update_maintenance_status(
+        db=db,
+        ma_mb=ma_mb,
+        payload=payload,
+        current_user=current_user,
+    )
+    return success_response(
+        message="Cập nhật trạng thái bảo trì của mặt bằng thành công",
         data=result,
     )
 

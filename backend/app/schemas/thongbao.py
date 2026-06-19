@@ -1,5 +1,5 @@
 # File: app/schemas/thongbao.py
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -44,6 +44,9 @@ class ThongBaoResponse(BaseModel):
 
 
 class ThongBaoFilter(BaseModel):
+    keyword: Optional[str] = None
+    ngay_tu: Optional[date] = None
+    ngay_den: Optional[date] = None
     loai_thong_bao: Optional[LoaiThongBao] = None
     doi_tuong_nhan: Optional[DoiTuongNhanThongBao] = None
     trang_thai: Optional[ThongBaoStatus] = None

@@ -18,7 +18,6 @@ from .statuses import (
     DuLieuImportTaiChinhStatus,
     HoaDonStatus,
     HopDongStatus,
-    LichBaoTriStatus,
     LoaiBaoCaoTaiChinh,
     LoaiKhoanTaiChinh,
     LoaiThongBao,
@@ -27,6 +26,12 @@ from .statuses import (
     SuCoBaoTriStatus,
     ThongBaoStatus,
     YeuCauThueThemStatus,
+)
+from .billing import (
+    ELECTRICITY_UNIT_PRICE,
+    WATER_UNIT_PRICE,
+    IMPORT_ALLOWED_FINANCIAL_TYPES,
+    IMPORT_FORBIDDEN_METER_TYPES,
 )
 
 __all__ = [
@@ -43,7 +48,6 @@ __all__ = [
     "HopDongStatus",
     "YeuCauThueThemStatus",
     "SuCoBaoTriStatus",
-    "LichBaoTriStatus",
     "CongNoStatus",
     "HoaDonStatus",
     "BaoCaoTaiChinhStatus",
@@ -55,4 +59,8 @@ __all__ = [
     "DoiTuongNhanThongBao",
     "LoaiKhoanTaiChinh",
     "AuditAction",
+    "ELECTRICITY_UNIT_PRICE",
+    "WATER_UNIT_PRICE",
+    "IMPORT_ALLOWED_FINANCIAL_TYPES",
+    "IMPORT_FORBIDDEN_METER_TYPES",
 ]

@@ -5,16 +5,12 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.constants.statuses import BaoCaoTaiChinhStatus, LoaiBaoCaoTaiChinh
-from app.utils.validators import ensure_not_blank, validate_month, validate_year
+from app.utils.validators import validate_month, validate_year
 
 
 class BaoCaoTaiChinhCreate(BaseModel):
-    loai_bao_cao: LoaiBaoCaoTaiChinh
-    thang: int
-    nam: int
-    noi_dung: str = Field(..., min_length=1)
-    tong_tien: Optional[Decimal] = Field(default=None, ge=0)
+    thang: int = Field(..., ge=1, le=12)
+    nam: int = Field(..., ge=2000, le=2100)
 
     @field_validator("thang")
     @classmethod
@@ -30,33 +26,10 @@ class BaoCaoTaiChinhCreate(BaseModel):
             raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
         return value
 
-    @field_validator("noi_dung")
-    @classmethod
-    def validate_content(cls, value: str) -> str:
-        if not ensure_not_blank(value):
-            raise ValueError("Nội dung không được để trống.")
-        return value
-
-
-class BaoCaoTaiChinhResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    ma_bao_cao_tai_chinh: str
-    loai_bao_cao: LoaiBaoCaoTaiChinh
-    thang: int
-    nam: int
-    ma_nhan_vien_lap: str
-    ngay_lap: datetime
-    noi_dung: str
-    tong_tien: Optional[Decimal] = None
-    trang_thai: BaoCaoTaiChinhStatus
-
 
 class BaoCaoTaiChinhFilter(BaseModel):
-    loai_bao_cao: Optional[LoaiBaoCaoTaiChinh] = None
     thang: Optional[int] = None
     nam: Optional[int] = None
-    trang_thai: Optional[BaoCaoTaiChinhStatus] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)
 
@@ -73,3 +46,53 @@ class BaoCaoTaiChinhFilter(BaseModel):
         if value is not None and not validate_year(value):
             raise ValueError("Năm phải nằm trong khoảng 2000 đến 2100.")
         return value
+
+
+class BaoCaoTaiChinhListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    ma_bao_cao: str
+    ma_nhan_vien_lap: str
+    thang: int
+    nam: int
+    ky_chot: str
+    ngay_lap: datetime
+
+
+class BaoCaoTaiChinhChiTietItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    stt: int
+    ma_hop_dong: str
+    ma_khach_thue: str
+    ma_mat_bang: str
+    ky: str
+    tien_thue: Decimal
+    tien_dien: Decimal
+    tien_nuoc: Decimal
+    tien_hoan_tra: Decimal
+    chi_phi_bao_tri: Decimal
+    tong_tien: Decimal
+    da_thanh_toan: Decimal
+    no: Decimal
+
+
+class BaoCaoTaiChinhThongKe(BaseModel):
+    tong_so_hd: int
+    tong_so_hd_con_no: int
+    tong: Decimal
+    tong_tt: Decimal
+    tong_no: Decimal
+
+
+class BaoCaoTaiChinhDetail(BaseModel):
+    bao_cao: BaoCaoTaiChinhListItem
+    chi_tiet: list[BaoCaoTaiChinhChiTietItem]
+    thong_ke: BaoCaoTaiChinhThongKe
+
+
+# Backward compatibility for app/schemas/__init__.py and any old imports.
+# The redesigned report API returns detail/list data through service response dicts,
+# but the old project init still imports this symbol during application startup.
+class BaoCaoTaiChinhResponse(BaoCaoTaiChinhDetail):
+    pass

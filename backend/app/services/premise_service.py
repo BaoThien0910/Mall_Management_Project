@@ -1,15 +1,27 @@
 # File: app/services/premise_service.py
+
 from typing import Any, Dict, List
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.constants.roles import RoleCode
 from app.constants.statuses import AuditAction, HopDongStatus, MatBangStatus
-from app.exceptions.business_exceptions import ConflictException, ForbiddenException, NotFoundException
+from app.exceptions.business_exceptions import (
+    BadRequestException,
+    ConflictException,
+    ForbiddenException,
+    InvalidStateException,
+    NotFoundException,
+)
 from app.models import HopDong, MatBang
-from app.schemas.matbang import MatBangCreate, MatBangFilter, MatBangUpdate
+from app.schemas.matbang import (
+    MatBangCreate,
+    MatBangFilter,
+    MatBangTrangThaiBaoTriUpdate,
+    MatBangUpdate,
+)
 from app.services.audit_service import write_audit_log
 from app.utils.pagination import calculate_offset, calculate_total_pages, normalize_pagination
 from app.utils.transaction import commit_or_rollback, transaction_context
@@ -37,15 +49,35 @@ def list_premises(
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = []
 
+    if filters.keyword:
+        conditions.append(
+            or_(
+                MatBang.ma_mat_bang.ilike(f"%{filters.keyword}%"),
+                MatBang.vi_tri.ilike(f"%{filters.keyword}%"),
+            )
+        )
+
     if _role_value(current_user) == RoleCode.KHACH_THUE.value:
         conditions.append(MatBang.trang_thai == MatBangStatus.CON_TRONG.value)
     elif filters.trang_thai:
-        conditions.append(MatBang.trang_thai == _enum_value(filters.trang_thai))
+        status_list = [s.strip() for s in filters.trang_thai.split(",") if s.strip()]
+        if status_list:
+            conditions.append(MatBang.trang_thai.in_(status_list))
 
     if filters.tang is not None:
-        conditions.append(MatBang.tang == filters.tang)
+        try:
+            floor_list = [int(f.strip()) for f in str(filters.tang).split(",") if f.strip()]
+            if floor_list:
+                conditions.append(MatBang.tang.in_(floor_list))
+        except ValueError:
+            pass
+
     if filters.loai_mat_bang:
-        conditions.append(MatBang.loai_mat_bang.ilike(f"%{filters.loai_mat_bang}%"))
+        type_list = [t.strip() for t in filters.loai_mat_bang.split(",") if t.strip()]
+        if type_list:
+            type_conditions = [MatBang.loai_mat_bang.ilike(f"%{t}%") for t in type_list]
+            conditions.append(or_(*type_conditions))
+
     if filters.dien_tich_tu is not None:
         conditions.append(MatBang.dien_tich >= filters.dien_tich_tu)
     if filters.dien_tich_den is not None:
@@ -53,6 +85,7 @@ def list_premises(
 
     stmt = select(MatBang)
     count_stmt = select(func.count()).select_from(MatBang)
+
     if conditions:
         clause = and_(*conditions)
         stmt = stmt.where(clause)
@@ -85,6 +118,7 @@ def get_premise_detail(
     premise = db.execute(
         select(MatBang).where(MatBang.ma_mat_bang == ma_mb)
     ).scalars().first()
+
     if premise is None:
         raise NotFoundException("Không tìm thấy mặt bằng")
 
@@ -93,6 +127,7 @@ def get_premise_detail(
         and premise.trang_thai != MatBangStatus.CON_TRONG.value
     ):
         raise ForbiddenException("Khách thuê chỉ được xem mặt bằng còn trống")
+
     return premise
 
 
@@ -105,6 +140,7 @@ def create_premise(
     existing = db.execute(
         select(MatBang).where(MatBang.ma_mat_bang == payload.ma_mat_bang)
     ).scalars().first()
+
     if existing is not None:
         raise ConflictException("Mã mặt bằng đã tồn tại")
 
@@ -117,7 +153,9 @@ def create_premise(
         trang_thai=_enum_value(payload.trang_thai),
         ghi_chu=payload.ghi_chu,
     )
+
     actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
+
     with transaction_context(db):
         db.add(premise)
         db.flush()
@@ -129,6 +167,7 @@ def create_premise(
             ma_doi_tuong=premise.ma_mat_bang,
             chi_tiet="Tạo mới mặt bằng",
         )
+
     return premise
 
 
@@ -142,14 +181,17 @@ def update_premise(
     premise = db.execute(
         select(MatBang).where(MatBang.ma_mat_bang == ma_mb)
     ).scalars().first()
+
     if premise is None:
         raise NotFoundException("Không tìm thấy mặt bằng")
 
     updates = payload.model_dump(exclude_unset=True)
     actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
+
     with transaction_context(db):
         for field_name, value in updates.items():
             setattr(premise, field_name, _enum_value(value))
+
         write_audit_log(
             db=db,
             ma_tk=actor_ma_tk,
@@ -158,6 +200,76 @@ def update_premise(
             ma_doi_tuong=premise.ma_mat_bang,
             chi_tiet="Cập nhật mặt bằng",
         )
+
+    return premise
+
+
+def update_maintenance_status(
+    db: Session,
+    ma_mb: str,
+    payload: MatBangTrangThaiBaoTriUpdate,
+    current_user: Any,
+) -> MatBang:
+    """
+    Chuyển trạng thái bảo trì của mặt bằng.
+
+    Chỉ cho phép:
+    - Còn trống -> Đang bảo trì
+    - Đang bảo trì -> Còn trống
+
+    Không cho phép thao tác trên mặt bằng Đang thuê hoặc trạng thái khác.
+    """
+    premise = db.execute(
+        select(MatBang).where(MatBang.ma_mat_bang == ma_mb)
+    ).scalars().first()
+
+    if premise is None:
+        raise NotFoundException("Không tìm thấy mặt bằng")
+
+    current_status = premise.trang_thai
+    target_status = _enum_value(payload.trang_thai)
+
+    allowed_current_statuses = {
+        MatBangStatus.CON_TRONG.value,
+        MatBangStatus.DANG_BAO_TRI.value,
+    }
+    allowed_target_statuses = {
+        MatBangStatus.CON_TRONG.value,
+        MatBangStatus.DANG_BAO_TRI.value,
+    }
+
+    if target_status not in allowed_target_statuses:
+        raise BadRequestException(
+            "Chỉ được chuyển trạng thái mặt bằng sang 'Còn trống' hoặc 'Đang bảo trì'"
+        )
+
+    if current_status not in allowed_current_statuses:
+        raise InvalidStateException(
+            "Chỉ được đổi trạng thái bảo trì cho mặt bằng đang 'Còn trống' hoặc 'Đang bảo trì'"
+        )
+
+    if current_status == target_status:
+        raise InvalidStateException("Mặt bằng đã ở trạng thái được chọn")
+
+    if current_status == MatBangStatus.CON_TRONG.value and target_status != MatBangStatus.DANG_BAO_TRI.value:
+        raise InvalidStateException("Mặt bằng còn trống chỉ được chuyển sang Đang bảo trì")
+
+    if current_status == MatBangStatus.DANG_BAO_TRI.value and target_status != MatBangStatus.CON_TRONG.value:
+        raise InvalidStateException("Mặt bằng đang bảo trì chỉ được chuyển về Còn trống")
+
+    actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
+
+    with transaction_context(db):
+        premise.trang_thai = target_status
+        write_audit_log(
+            db=db,
+            ma_tk=actor_ma_tk,
+            hanh_dong=AuditAction.CAP_NHAT,
+            doi_tuong="MATBANG",
+            ma_doi_tuong=premise.ma_mat_bang,
+            chi_tiet=f"Chuyển trạng thái mặt bằng từ {current_status} sang {target_status}",
+        )
+
     return premise
 
 
@@ -170,6 +282,7 @@ def delete_premise(
     premise = db.execute(
         select(MatBang).where(MatBang.ma_mat_bang == ma_mb)
     ).scalars().first()
+
     if premise is None:
         raise NotFoundException("Không tìm thấy mặt bằng")
 
@@ -179,10 +292,12 @@ def delete_premise(
             HopDong.trang_thai == HopDongStatus.DANG_HIEU_LUC.value,
         )
     ).scalars().first()
+
     if active_contract is not None:
         raise ConflictException("Không thể xóa mặt bằng đang có hợp đồng hiệu lực")
 
     actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
+
     try:
         db.delete(premise)
         write_audit_log(

@@ -2,18 +2,15 @@
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.constants.roles import RoleCode
 from app.database import get_db
 from app.dependencies import require_roles
-from app.schemas.baocaotaichinh import (
-    BaoCaoTaiChinhCreate,
-    BaoCaoTaiChinhFilter,
-)
+from app.schemas.baocaotaichinh import BaoCaoTaiChinhCreate, BaoCaoTaiChinhFilter
 from app.services import financial_report_service
 from app.utils.response import success_response
-
 
 router = APIRouter(
     prefix="/bao-cao-tai-chinh",
@@ -22,43 +19,22 @@ router = APIRouter(
 
 
 @router.post(
-    "/cong-no",
+    "",
     status_code=status.HTTP_201_CREATED,
     response_model=Dict[str, Any],
 )
-def create_debt_report(
+def create_financial_report(
     payload: BaoCaoTaiChinhCreate,
     db: Session = Depends(get_db),
     current_user: Any = Depends(require_roles([RoleCode.TP_KDTC])),
 ) -> Dict[str, Any]:
-    result = financial_report_service.create_debt_report(
+    result = financial_report_service.create_financial_report(
         db=db,
         payload=payload,
         current_user=current_user,
     )
     return success_response(
-        message="Lập báo cáo công nợ thành công",
-        data=result,
-    )
-
-
-@router.post(
-    "/doanh-so",
-    status_code=status.HTTP_201_CREATED,
-    response_model=Dict[str, Any],
-)
-def create_revenue_report(
-    payload: BaoCaoTaiChinhCreate,
-    db: Session = Depends(get_db),
-    current_user: Any = Depends(require_roles([RoleCode.TP_KDTC])),
-) -> Dict[str, Any]:
-    result = financial_report_service.create_revenue_report(
-        db=db,
-        payload=payload,
-        current_user=current_user,
-    )
-    return success_response(
-        message="Lập báo cáo doanh số thành công",
+        message="Lập báo cáo tài chính thành công",
         data=result,
     )
 
@@ -85,42 +61,42 @@ def list_financial_reports(
 
 
 @router.get(
-    "/{ma_bctc}",
+    "/{ma_bc}",
     status_code=status.HTTP_200_OK,
     response_model=Dict[str, Any],
 )
 def get_financial_report_detail(
-    ma_bctc: str,
+    ma_bc: str,
     db: Session = Depends(get_db),
     current_user: Any = Depends(require_roles([RoleCode.BQL, RoleCode.TP_KDTC])),
 ) -> Dict[str, Any]:
     result = financial_report_service.get_financial_report_detail(
         db=db,
-        ma_bctc=ma_bctc,
+        ma_bc=ma_bc,
         current_user=current_user,
     )
     return success_response(
-        message="Lấy chi tiết báo cáo tài chính thành công",
+        message="Lấy nội dung báo cáo tài chính thành công",
         data=result,
     )
 
 
-@router.patch(
-    "/{ma_bctc}/ban-hanh",
+@router.get(
+    "/{ma_bc}/excel",
     status_code=status.HTTP_200_OK,
-    response_model=Dict[str, Any],
 )
-def publish_financial_report(
-    ma_bctc: str,
+def export_financial_report_excel(
+    ma_bc: str,
     db: Session = Depends(get_db),
-    current_user: Any = Depends(require_roles([RoleCode.TP_KDTC])),
-) -> Dict[str, Any]:
-    result = financial_report_service.publish_financial_report(
+    current_user: Any = Depends(require_roles([RoleCode.BQL, RoleCode.TP_KDTC])),
+) -> StreamingResponse:
+    output = financial_report_service.export_financial_report_excel(
         db=db,
-        ma_bctc=ma_bctc,
+        ma_bc=ma_bc,
         current_user=current_user,
     )
-    return success_response(
-        message="Ban hành báo cáo tài chính thành công",
-        data=result,
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="bao-cao-tai-chinh-{ma_bc}.xlsx"'},
     )

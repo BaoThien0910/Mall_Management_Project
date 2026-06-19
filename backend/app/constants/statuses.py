@@ -37,15 +37,6 @@ class SuCoBaoTriStatus(Enum):
     HOAN_THANH = "Hoàn thành"
 
 
-class LichBaoTriStatus(Enum):
-    """Trạng thái thực hiện lịch bảo trì."""
-
-    CHUA_THUC_HIEN = "Chưa thực hiện"
-    DANG_THUC_HIEN = "Đang thực hiện"
-    HOAN_THANH = "Hoàn thành"
-    HUY = "Hủy"
-
-
 class CongNoStatus(Enum):
     """Trạng thái thanh toán của công nợ."""
 
@@ -63,7 +54,7 @@ class HoaDonStatus(Enum):
 
 
 class BaoCaoTaiChinhStatus(Enum):
-    """Trạng thái phát hành của báo cáo tài chính."""
+    """Giữ lại để tương thích import cũ. Báo cáo mới không dùng nháp/ban hành."""
 
     BAN_NHAP = "Bản nháp"
     DA_BAN_HANH = "Đã ban hành"
@@ -93,7 +84,7 @@ class PhuongThucThanhToan(Enum):
 
 
 class LoaiBaoCaoTaiChinh(Enum):
-    """Loại báo cáo tài chính được hỗ trợ."""
+    """Giữ lại để tương thích import cũ. Báo cáo mới lập trực tiếp theo tháng/năm."""
 
     BAO_CAO_CONG_NO = "Báo cáo công nợ"
     BAO_CAO_DOANH_SO = "Báo cáo doanh số"
@@ -119,8 +110,6 @@ class LoaiKhoanTaiChinh(Enum):
     """Loại khoản mục tài chính có thể import."""
 
     TIEN_THUE = "Tiền thuê"
-    TIEN_DIEN = "Tiền điện"
-    TIEN_NUOC = "Tiền nước"
     PHI_BAO_TRI = "Phí bảo trì"
     HOAN_TRA = "Hoàn trả"
 

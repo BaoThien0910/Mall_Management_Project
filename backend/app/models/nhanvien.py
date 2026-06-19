@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+
+from sqlalchemy import CheckConstraint, Index, String, Unicode, text
 from sqlalchemy.dialects.mssql import DATETIME2
-from sqlalchemy import CheckConstraint, DateTime, Index, String, Unicode, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -93,18 +94,10 @@ class NhanVien(Base):
         back_populates="nhan_vien_xu_ly",
         foreign_keys="SuCoBaoTri.ma_nhan_vien_xu_ly",
     )
-    lich_bao_tris_lap: Mapped[list["LichBaoTri"]] = relationship(
-        back_populates="nhan_vien_lap",
-        foreign_keys="LichBaoTri.ma_nhan_vien_lap",
-    )
-    lich_bao_tris_thuc_hien: Mapped[list["LichBaoTri"]] = relationship(
-        back_populates="nhan_vien_thuc_hien",
-        foreign_keys="LichBaoTri.ma_nhan_vien_thuc_hien",
-    )
     bao_cao_bao_tris_lap: Mapped[list["BaoCaoBaoTri"]] = relationship(
         back_populates="nhan_vien_lap",
         foreign_keys="BaoCaoBaoTri.ma_nhan_vien_lap",
     )
 
     def __repr__(self) -> str:
-        return f"<NhanVien(ma_nhan_vien={self.ma_nhan_vien!r}, ho_ten={self.ho_ten!r})>"
+        return f"<NhanVien(ma_nhan_vien={self.ma_nhan_vien})>"

@@ -1,0 +1,12 @@
+export const MAT_BANG_STATUS = ["Còn trống", "Đang thuê", "Đang bảo trì"];
+export const HOP_DONG_STATUS = ["Đang hiệu lực", "Hết hạn", "Đã hủy"];
+export const YEU_CAU_THUE_THEM_STATUS = ["Chờ duyệt", "Đã duyệt - Chờ số hóa hợp đồng", "Từ chối", "Đã tạo hợp đồng"];
+export const SU_CO_STATUS = ["Chờ duyệt", "Đã duyệt", "Từ chối", "Đang xử lý", "Hoàn thành"];
+export const LICH_BAO_TRI_STATUS = ["Chưa thực hiện", "Đang thực hiện", "Hoàn thành", "Hủy"];
+export const CONG_NO_STATUS = ["Chưa thanh toán", "Đã thanh toán", "Quá hạn"];
+export const PAYMENT_METHODS = ["VNPay", "MoMo", "ZaloPay"];
+export const HOA_DON_STATUS = ["Đang xử lý", "Thành công", "Thất bại"];
+export const LOAI_BAO_CAO_TAI_CHINH = ["Báo cáo công nợ", "Báo cáo doanh số"];
+export const LOAI_THONG_BAO = ["Thông báo", "Kế hoạch", "Quy định"];
+export const DOI_TUONG_NHAN = ["Toàn hệ thống", "Nội bộ", "Khách thuê"];
+export const LOAI_KHOAN_TAI_CHINH = ["Tiền thuê", "Tiền điện", "Tiền nước", "Phí bảo trì", "Hoàn trả"];

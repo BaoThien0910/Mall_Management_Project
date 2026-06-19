@@ -1,46 +1,48 @@
-import axiosClient from './axiosClient';
+import { apiClient } from "./apiClient";
+import { buildQuery } from "../utils/data";
 
-export function normalizeTicketList(data) {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.items)) return data.items;
-  return [];
-}
+export const incidentService = {
+  create(payload) {
+    return apiClient.post("/su-co-bao-tri", payload);
+  },
 
-export async function listTickets(params = {}) {
-  const { data } = await axiosClient.get('/maintenance/tickets', { params });
-  return data;
-}
+  list(params) {
+    return apiClient.get(`/su-co-bao-tri${buildQuery(params)}`);
+  },
 
-export async function getTicketById(id) {
-  const { data } = await axiosClient.get(`/maintenance/tickets/${id}`);
-  return data;
-}
+  review(maSuCo, payload) {
+    return apiClient.patch(`/su-co-bao-tri/${maSuCo}/duyet`, payload);
+  },
 
-export async function createTicket(ticketData) {
-  const { data } = await axiosClient.post('/maintenance/tickets', ticketData);
-  return data;
-}
+  assign(maSuCo, payload) {
+    return apiClient.patch(`/su-co-bao-tri/${maSuCo}/phan-cong`, payload);
+  },
 
-export async function updateTicketStatus(ticketId, status) {
-  const { data } = await axiosClient.put(`/maintenance/tickets/${ticketId}/status`, {
-    status,
-  });
-  return data;
-}
+  updateResult(maSuCo, payload) {
+    return apiClient.patch(`/su-co-bao-tri/${maSuCo}/ket-qua`, payload);
+  },
 
-export async function assignTicket(ticketId, assignedTo) {
-  const { data } = await axiosClient.put(`/maintenance/tickets/${ticketId}/assign`, {
-    assigned_to: assignedTo,
-  });
-  return data;
-}
+  updateCost(maSuCo, payload) {
+    return apiClient.patch(`/su-co-bao-tri/${maSuCo}/chi-phi`, payload);
+  },
+};
 
-export async function listSchedule(params = {}) {
-  const { data } = await axiosClient.get('/maintenance/schedule', { params });
-  return data;
-}
+export const maintenanceReportService = {
+  create(payload) {
+    return apiClient.post("/bao-cao-bao-tri", payload);
+  },
 
-export async function getStatistics() {
-  const { data } = await axiosClient.get('/maintenance/statistics');
-  return data;
-}
+  list(params) {
+    return apiClient.get(`/bao-cao-bao-tri${buildQuery(params)}`);
+  },
+
+  detail(maBc) {
+    return apiClient.get(`/bao-cao-bao-tri/${maBc}`);
+  },
+
+  exportExcel(maBc) {
+    return apiClient.get(`/bao-cao-bao-tri/${maBc}/excel`, {
+      responseType: "blob",
+    });
+  },
+};

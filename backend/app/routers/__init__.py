@@ -4,9 +4,10 @@ from . import baocaobaotri
 from . import baocaotaichinh
 from . import chisodiennuoc
 from . import congno
+from . import dashboard
 from . import hopdong
 from . import import_taichinh
-from . import lichbt
+from . import lookup
 from . import matbang
 from . import nhatky
 from . import rbac
@@ -29,8 +30,9 @@ __all__ = [
     "import_taichinh",
     "baocaotaichinh",
     "sk_baotri",
-    "lichbt",
     "baocaobaotri",
     "thongbao",
     "nhatky",
+    "dashboard",
+    "lookup",
 ]

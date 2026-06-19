@@ -28,6 +28,43 @@ def _role_value(current_user: Any) -> Any:
     return _enum_value(_user_attr(current_user, "ma_vai_tro", "ma_vai_tro"))
 
 
+def auto_expire_contracts(db: Session, current_user: Any = None) -> None:
+    """Tự động chuyển các hợp đồng đã hết hạn sang trạng thái Hết hạn và giải phóng mặt bằng tương ứng."""
+    from app.utils.datetime_helper import current_date
+    today = current_date()
+
+    expired_contracts = db.execute(
+        select(HopDong).where(
+            HopDong.trang_thai == HopDongStatus.DANG_HIEU_LUC.value,
+            HopDong.ngay_ket_thuc < today
+        )
+    ).scalars().all()
+
+    if not expired_contracts:
+        return
+
+    actor_ma_tk = None
+    if current_user:
+        actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
+
+    with transaction_context(db):
+        for contract in expired_contracts:
+            contract.trang_thai = HopDongStatus.HET_HAN.value
+            premise = contract.mat_bang
+            if premise and premise.trang_thai == MatBangStatus.DANG_THUE.value:
+                premise.trang_thai = MatBangStatus.CON_TRONG.value
+            
+            if actor_ma_tk:
+                write_audit_log(
+                    db=db,
+                    ma_tk=actor_ma_tk,
+                    hanh_dong=AuditAction.CAP_NHAT,
+                    doi_tuong="HOPDONG",
+                    ma_doi_tuong=contract.ma_hop_dong,
+                    chi_tiet=f"Hợp đồng tự động chuyển sang Hết hạn và giải phóng mặt bằng {contract.ma_mat_bang} do hết thời hạn (ngày kết thúc: {contract.ngay_ket_thuc})",
+                )
+
+
 def list_contracts(
     db: Session,
     filters: HopDongFilter,
@@ -36,6 +73,8 @@ def list_contracts(
     """Liệt kê hợp đồng toàn hệ thống cho nhóm quản lý được phép."""
     if _role_value(current_user) == RoleCode.KHACH_THUE.value:
         raise ForbiddenException("Khách thuê không được xem danh sách toàn bộ hợp đồng")
+
+    auto_expire_contracts(db, current_user)
 
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = []
@@ -49,6 +88,21 @@ def list_contracts(
         conditions.append(HopDong.ngay_bat_dau >= filters.ngay_bat_dau_tu)
     if filters.ngay_bat_dau_den:
         conditions.append(HopDong.ngay_bat_dau <= filters.ngay_bat_dau_den)
+    if filters.ngay_ket_thuc_tu:
+        conditions.append(HopDong.ngay_ket_thuc >= filters.ngay_ket_thuc_tu)
+    if filters.ngay_ket_thuc_den:
+        conditions.append(HopDong.ngay_ket_thuc <= filters.ngay_ket_thuc_den)
+    if filters.gia_thue_tu is not None:
+        conditions.append(HopDong.gia_thue_thang >= filters.gia_thue_tu)
+    if filters.gia_thue_den is not None:
+        conditions.append(HopDong.gia_thue_thang <= filters.gia_thue_den)
+    if filters.keyword:
+        search_val = f"%{filters.keyword}%"
+        conditions.append(
+            (HopDong.ma_hop_dong.ilike(search_val)) |
+            (HopDong.ma_khach_thue.ilike(search_val)) |
+            (HopDong.ma_mat_bang.ilike(search_val))
+        )
 
     stmt = select(HopDong)
     count_stmt = select(func.count()).select_from(HopDong)
@@ -83,6 +137,8 @@ def get_contract_detail(
     if _role_value(current_user) == RoleCode.KHACH_THUE.value:
         raise ForbiddenException("Khách thuê không được dùng endpoint xem chi tiết nội bộ")
 
+    auto_expire_contracts(db, current_user)
+
     contract = db.execute(
         select(HopDong).where(HopDong.ma_hop_dong == ma_hd)
     ).scalars().first()
@@ -100,6 +156,8 @@ def list_my_contracts(
     ma_khach_thue = _user_attr(current_user, "ma_kh", "ma_khach_thue")
     if not ma_khach_thue:
         raise ForbiddenException("Tài khoản hiện tại không phải khách thuê")
+
+    auto_expire_contracts(db, current_user)
 
     page, page_size = normalize_pagination(filters.page, filters.page_size)
     conditions: List[Any] = [HopDong.ma_khach_thue == ma_khach_thue]

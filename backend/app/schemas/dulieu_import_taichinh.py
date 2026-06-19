@@ -32,6 +32,8 @@ class DuLieuImportTaiChinhResponse(BaseModel):
 
 class DuLieuImportTaiChinhFilter(BaseModel):
     ma_hop_dong: Optional[str] = Field(default=None, max_length=20)
+    keyword: Optional[str] = None
+    loai_khoan: Optional[LoaiKhoanTaiChinh] = None
     thang: Optional[int] = None
     nam: Optional[int] = None
     trang_thai: Optional[DuLieuImportTaiChinhStatus] = None
@@ -64,3 +66,8 @@ class KetQuaImportTaiChinhResponse(BaseModel):
     so_dong_hop_le: int = Field(..., ge=0)
     so_dong_loi: int = Field(..., ge=0)
     danh_sach_loi: List[LoiDongImportResponse] = Field(default_factory=list)
+
+
+class BatchDeleteImportRequest(BaseModel):
+    ids: List[str] = Field(..., min_length=1)
+

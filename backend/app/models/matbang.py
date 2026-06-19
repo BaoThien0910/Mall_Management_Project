@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from sqlalchemy.dialects.mssql import DATETIME2
+
 from sqlalchemy import CheckConstraint, DECIMAL, Index, Integer, String, Unicode
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,8 +33,9 @@ class MatBang(Base):
     yeu_cau_thue_thems: Mapped[list["YeuCauThueThem"]] = relationship(back_populates="mat_bang")
     chi_so_dien_nuocs: Mapped[list["ChiSoDienNuoc"]] = relationship(back_populates="mat_bang")
     su_co_bao_tris: Mapped[list["SuCoBaoTri"]] = relationship(back_populates="mat_bang")
-    lich_bao_tris: Mapped[list["LichBaoTri"]] = relationship(back_populates="mat_bang")
-    bao_cao_bao_tris: Mapped[list["BaoCaoBaoTri"]] = relationship(back_populates="mat_bang")
+    bao_cao_bao_tri_chi_tiets: Mapped[list["BaoCaoBaoTriChiTiet"]] = relationship(
+        back_populates="mat_bang"
+    )
 
     def __repr__(self) -> str:
-        return f"<MatBang(ma_mat_bang={self.ma_mat_bang!r}, vi_tri={self.vi_tri!r})>"
+        return f"<MatBang(ma_mat_bang={self.ma_mat_bang})>"

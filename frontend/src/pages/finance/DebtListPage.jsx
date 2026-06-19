@@ -1,285 +1,376 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Table,
-  Typography,
-  Tag,
-  Space,
-  Card,
-  Input,
-  Select,
-  Button,
-  Row,
-  Col,
-  Statistic,
-  Skeleton,
-  Empty,
-} from 'antd';
-import {
-  SearchOutlined,
-  EyeOutlined,
-  CreditCardOutlined,
-  CalculatorOutlined,
-  UploadOutlined,
-  FileTextOutlined,
-} from '@ant-design/icons';
-import { fetchDebts } from '../../services/debtService';
-import { DEBT_STATUS } from '../../constants/financeConstants';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { CalculatorOutlined, FilterOutlined } from "@ant-design/icons";
+import { Alert, Card, Col, Form, InputNumber, Modal, Row, Typography, message, Popover, Select, Space, Button } from "antd";
+import { useCallback, useState, useRef, useEffect } from "react";
+import Toolbar from "../../components/common/Toolbar";
+import { CONG_NO_STATUS } from "../../constants/statuses";
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+import PageHeader from "../../components/common/PageHeader";
+import ResponsiveTable from "../../components/common/ResponsiveTable";
+import StatusTag from "../../components/common/StatusTag";
+import { debtService } from "../../services/debtService";
+import { showApiError } from "../../services/apiClient";
+import { useCrudList } from "../../hooks/useCrudList";
+import { formatMoney, pick, pickId } from "../../utils/data";
+
+const { Text } = Typography;
 
 export default function DebtListPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isTenant = location.pathname.startsWith('/tenant');
-  const basePath = isTenant ? '/tenant/billing' : '/staff/finance';
+  const [open, setOpen] = useState(false);
+  const [calculateResult, setCalculateResult] = useState(null);
+  const [form] = Form.useForm();
 
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState(null);
-  const [rawRows, setRawRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [keyword, setKeyword] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const timerRef = useRef(null);
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    nam: undefined,
+    trang_thai: undefined,
+  });
+
+  const [tempNam, setTempNam] = useState(undefined);
+  const [tempTrangThai, setTempTrangThai] = useState(undefined);
 
   useEffect(() => {
-    const h = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
-    return () => window.clearTimeout(h);
-  }, [search]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = {
-          q: debouncedSearch || undefined,
-          statusFil: statusFilter || undefined,
-          limit: 500,
-          skip: 0,
-        };
-        const rows = await fetchDebts(params);
-        if (!cancelled) setRawRows(rows);
-      } catch (e) {
-        if (!cancelled) setError(e);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
     return () => {
-      cancelled = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
-  }, [debouncedSearch, statusFilter]);
+  }, []);
 
-  const debts = useMemo(() => rawRows, [rawRows]);
+  const fetcher = useCallback((params) => debtService.list(params), []);
+  const { items, loading, reload, setParams } = useCrudList(fetcher, {
+    page: 1,
+    page_size: 20,
+  });
 
-  const summary = useMemo(() => {
-    const remaining = debts.reduce((sum, d) => sum + (d.totalAmount - d.paidAmount), 0);
-    const overdue = debts.filter((d) => d.status === 'overdue').length;
-    return { count: debts.length, remaining, overdue };
-  }, [debts]);
+  const applySearch = (val) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      const activeFilters = {};
+      Object.keys(appliedFilters).forEach((key) => {
+        if (appliedFilters[key] !== undefined && appliedFilters[key] !== null && appliedFilters[key] !== "") {
+          activeFilters[key] = appliedFilters[key];
+        }
+      });
+      setParams({
+        keyword: val || undefined,
+        ...activeFilters,
+        page: 1,
+        page_size: 20,
+      });
+    }, 500);
+  };
 
-  const columns = [
-    { title: 'Mã công nợ', dataIndex: 'id', key: 'id', width: 140 },
-    ...(!isTenant
-      ? [
-          { title: 'Khách thuê', dataIndex: 'tenant', key: 'tenant' },
-          { title: 'Mặt bằng', dataIndex: 'premise', key: 'premise', width: 100 },
-        ]
-      : []),
-    { title: 'Kỳ', dataIndex: 'period', key: 'period', width: 90 },
-    {
-      title: 'Hạn thanh toán',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      width: 130,
-      render: (d) => formatDate(d),
-    },
-    {
-      title: 'Tổng phải trả',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      align: 'right',
-      render: (v) => formatCurrency(v),
-    },
-    {
-      title: 'Đã trả',
-      dataIndex: 'paidAmount',
-      key: 'paidAmount',
-      align: 'right',
-      render: (v) => formatCurrency(v),
-    },
-    {
-      title: 'Còn lại',
-      key: 'remaining',
-      align: 'right',
-      render: (_, r) => (
-        <Text strong type={r.status === 'overdue' ? 'danger' : undefined}>
-          {formatCurrency(r.totalAmount - r.paidAmount)}
-        </Text>
-      ),
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      width: 150,
-      render: (st) => {
-        const cfg = DEBT_STATUS[st] || { label: st, color: 'default' };
-        return <Tag color={cfg.color}>{cfg.label}</Tag>;
-      },
-    },
-    {
-      title: 'Thao tác',
-      key: 'action',
-      width: isTenant ? 180 : 120,
-      fixed: 'right',
-      render: (_, record) => {
-        const canPay = record.status !== 'paid';
-        return (
-          <Space size="small" wrap>
-            <Button
-              type="link"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => navigate(`${basePath}/${record.id}`)}
-            >
-              Chi tiết
-            </Button>
-            {isTenant && canPay && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<CreditCardOutlined />}
-                onClick={() => navigate(`${basePath}/pay/${record.id}`)}
-              >
-                Thanh toán
-              </Button>
-            )}
-          </Space>
-        );
-      },
-    },
-  ];
+  const handleApply = () => {
+    const nextFilters = {
+      nam: tempNam || undefined,
+      trang_thai: tempTrangThai || undefined,
+    };
+    setAppliedFilters(nextFilters);
 
-  const tableSkeleton = loading && debts.length === 0;
+    const cleanFilters = {};
+    Object.keys(nextFilters).forEach((key) => {
+      if (nextFilters[key] !== undefined && nextFilters[key] !== null && nextFilters[key] !== "") {
+        cleanFilters[key] = nextFilters[key];
+      }
+    });
 
-  return (
-    <>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <Title level={3} style={{ margin: 0 }}>
-          {isTenant ? 'Công nợ & Thanh toán' : 'Quản lý Công nợ'}
-        </Title>
-        <Space wrap>
-          {!isTenant && (
-            <>
-              <Button icon={<UploadOutlined />} onClick={() => navigate(`${basePath}/import`)}>
-                Nhập dữ liệu
-              </Button>
-              <Button type="primary" icon={<CalculatorOutlined />} onClick={() => navigate(`${basePath}/import`)}>
-                Tính công nợ
-              </Button>
-            </>
-          )}
-          <Button icon={<FileTextOutlined />} onClick={() => navigate(`${basePath}/invoices`)}>
-            Lịch sử hóa đơn
+    setParams({
+      keyword: keyword || undefined,
+      ...cleanFilters,
+      page: 1,
+      page_size: 20,
+    });
+    setPopoverOpen(false);
+  };
+
+  const handleCancel = () => {
+    setTempNam(appliedFilters.nam);
+    setTempTrangThai(appliedFilters.trang_thai);
+    setPopoverOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempNam(undefined);
+    setTempTrangThai(undefined);
+
+    setAppliedFilters({
+      nam: undefined,
+      trang_thai: undefined,
+    });
+    setPopoverOpen(false);
+
+    setParams({
+      keyword: keyword || undefined,
+      page: 1,
+      page_size: 20,
+    });
+  };
+
+  const handleReload = () => {
+    setKeyword("");
+    setAppliedFilters({
+      nam: undefined,
+      trang_thai: undefined,
+    });
+    setTempNam(undefined);
+    setTempTrangThai(undefined);
+    setParams({
+      page: 1,
+      page_size: 20,
+    });
+    reload();
+  };
+
+  const activeFiltersCount =
+    (appliedFilters.nam ? 1 : 0) +
+    (appliedFilters.trang_thai ? 1 : 0);
+
+  const filterContent = (
+    <div style={{ padding: "8px", width: 300 }}>
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Năm</div>
+        <InputNumber
+          placeholder="Nhập năm (VD: 2026)"
+          value={tempNam}
+          onChange={setTempNam}
+          style={{ width: "100%" }}
+          min={2000}
+          max={2100}
+          precision={0}
+        />
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ fontWeight: 600, marginBottom: "8px" }}>Trạng thái</div>
+        <Select
+          placeholder="Chọn trạng thái"
+          value={tempTrangThai}
+          onChange={setTempTrangThai}
+          style={{ width: "100%" }}
+          allowClear
+          options={CONG_NO_STATUS.map((item) => ({ value: item, label: item }))}
+        />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button type="primary" danger onClick={handleClearFilters}>
+          Xóa bộ lọc
+        </Button>
+        <Space>
+          <Button onClick={handleCancel}>Hủy</Button>
+          <Button type="primary" onClick={handleApply}>
+            Áp dụng
           </Button>
         </Space>
       </div>
+    </div>
+  );
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={8}>
-          <Card style={{ borderRadius: 8 }}>
-            {loading ? (
-              <Skeleton active paragraph={{ rows: 1 }} />
-            ) : (
-              <Statistic title="Số kỳ công nợ" value={summary.count} />
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card style={{ borderRadius: 8 }}>
-            {loading ? (
-              <Skeleton active paragraph={{ rows: 1 }} />
-            ) : (
-              <Statistic
-                title="Tổng còn phải trả"
-                value={summary.remaining}
-                formatter={(v) => formatCurrency(v)}
-                valueStyle={{ color: '#cf1322', fontSize: 18 }}
-              />
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card style={{ borderRadius: 8 }}>
-            {loading ? (
-              <Skeleton active paragraph={{ rows: 1 }} />
-            ) : (
-              <Statistic title="Kỳ quá hạn" value={summary.overdue} valueStyle={{ color: '#fa8c16' }} />
-            )}
-          </Card>
-        </Col>
-      </Row>
+  const calculate = async () => {
+    try {
+      const values = await form.validateFields();
+      const result = await debtService.calculate(values);
 
-      <Card bodyStyle={{ padding: 16 }} style={{ marginBottom: 24, borderRadius: 8 }}>
-        <Space wrap size="middle">
-          <Input
-            placeholder="Tìm mã CN, khách thuê, mặt bằng..."
-            prefix={<SearchOutlined />}
-            style={{ width: 280 }}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            allowClear
-          />
-          <Select
-            placeholder="Trạng thái"
-            style={{ width: 180 }}
-            allowClear
-            value={statusFilter}
-            onChange={setStatusFilter}
+      setCalculateResult(result);
+      message.success("Đã tính công nợ");
+      setOpen(false);
+      form.resetFields();
+      reload();
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
+  const columns = [
+    {
+      title: "Mã CN",
+      render: (_, record) => pick(record, ["ma_cong_no", "ma_cn", "MACN"]),
+    },
+    {
+      title: "Hợp đồng",
+      render: (_, record) => pick(record, ["ma_hop_dong", "ma_hd", "MAHD"]),
+    },
+    {
+      title: "Kỳ",
+      render: (_, record) => `${pick(record, ["thang", "THANG"])} / ${pick(record, ["nam", "NAM"])}`,
+    },
+    {
+      title: "Tiền thuê",
+      render: (_, record) => formatMoney(pick(record, ["tien_thue", "TIENTHUE"])),
+    },
+    {
+      title: "Tiền điện",
+      render: (_, record) => formatMoney(pick(record, ["tien_dien", "TIENDIEN"])),
+    },
+    {
+      title: "Tiền nước",
+      render: (_, record) => formatMoney(pick(record, ["tien_nuoc", "TIENNUOC"])),
+    },
+    {
+      title: "Phí bảo trì",
+      render: (_, record) => formatMoney(pick(record, ["phi_bao_tri", "PHIBAOTRI"])),
+    },
+    {
+      title: "Hoàn trả",
+      render: (_, record) => formatMoney(pick(record, ["tien_hoan", "TIENHOAN"])),
+    },
+    {
+      title: "Tổng tiền",
+      render: (_, record) => formatMoney(pick(record, ["tong_tien", "TONGTIEN"])),
+    },
+    {
+      title: "Hạn thanh toán",
+      render: (_, record) => pick(record, ["han_thanh_toan", "HAN_THANHTOAN"], "-"),
+    },
+    {
+      title: "Trạng thái",
+      render: (_, record) => <StatusTag value={pick(record, ["trang_thai", "TRANGTHAI"])} />,
+    },
+  ];
+
+  return (
+    <>
+      <PageHeader
+        title="Công nợ"
+        breadcrumb={["Tài chính", "Công nợ"]}
+        actionText="Tính công nợ"
+        actionIcon={<CalculatorOutlined />}
+        onAction={() => setOpen(true)}
+      />
+
+      {calculateResult ? (
+        <Card className="section-card">
+          <Row gutter={[16, 16]}>
+            <Col xs={12} md={6}>
+              <Text type="secondary">Đã tạo</Text>
+              <h2 className="stat-value">{calculateResult.so_cong_no_da_tao || 0}</h2>
+            </Col>
+            <Col xs={12} md={6}>
+              <Text type="secondary">Bỏ qua</Text>
+              <h2 className="stat-value">{calculateResult.so_cong_no_bo_qua || 0}</h2>
+            </Col>
+            <Col xs={12} md={6}>
+              <Text type="secondary">Thiếu chỉ số</Text>
+              <h2 className="stat-value stat-danger">{calculateResult.so_hop_dong_thieu_chi_so || 0}</h2>
+            </Col>
+            <Col xs={12} md={6}>
+              <Text type="secondary">Thiếu import</Text>
+              <h2 className="stat-value stat-danger">{calculateResult.so_hop_dong_thieu_du_lieu || 0}</h2>
+            </Col>
+          </Row>
+
+          {calculateResult.danh_sach_thieu_chi_so?.length ? (
+            <Alert
+              className="mt-16"
+              type="warning"
+              showIcon
+              message="Có hợp đồng thiếu chỉ số điện nước"
+              description={calculateResult.danh_sach_thieu_chi_so
+                .map((item) => `${item.ma_hop_dong} - ${item.ma_mat_bang}: ${item.ly_do}`)
+                .join("; ")}
+            />
+          ) : null}
+
+          {calculateResult.danh_sach_thieu_du_lieu?.length ? (
+            <Alert
+              className="mt-16"
+              type="error"
+              showIcon
+              message="Có hợp đồng thiếu dữ liệu import"
+              description={calculateResult.danh_sach_thieu_du_lieu
+                .map((item) => `${item.ma_hop_dong}: ${item.ly_do}`)
+                .join("; ")}
+            />
+          ) : null}
+        </Card>
+      ) : null}
+
+      <Toolbar
+        keyword={keyword}
+        onKeywordChange={(val) => {
+          setKeyword(val);
+          applySearch(val);
+        }}
+        placeholder="Tìm kiếm mã Hợp đồng"
+        onReload={handleReload}
+      >
+        <Popover
+          content={filterContent}
+          trigger="click"
+          open={popoverOpen}
+          onOpenChange={(visible) => {
+            setPopoverOpen(visible);
+            if (!visible) {
+              handleCancel();
+            }
+          }}
+          placement="bottomLeft"
+          overlayStyle={{ zIndex: 1050 }}
+        >
+          <Button
+            type="primary"
+            icon={<FilterOutlined />}
+            style={{
+              minWidth: 100,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            {Object.entries(DEBT_STATUS).map(([key, { label }]) => (
-              <Option key={key} value={key}>
-                {label}
-              </Option>
-            ))}
-          </Select>
-        </Space>
-      </Card>
+            <span style={{ display: "inline-flex", alignItems: "center" }}>Lọc</span>
+            {activeFiltersCount > 0 && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: "#fff",
+                  color: "#1677ff",
+                  borderRadius: "50%",
+                  width: "20px",
+                  height: "20px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: "1",
+                }}
+              >
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+        </Popover>
+      </Toolbar>
 
-      {error ? (
-        <Card>
-          <Empty description={`Không tải được dữ liệu: ${error.message || ''}`} />
-        </Card>
-      ) : tableSkeleton ? (
-        <Skeleton active paragraph={{ rows: 6 }} />
-      ) : debts.length === 0 ? (
-        <Card>
-          <Empty description="Chưa có công nợ phù hợp" />
-        </Card>
-      ) : (
-        <Table
-          columns={columns}
-          dataSource={debts.map((d) => ({ ...d, key: d.id }))}
-          style={{ backgroundColor: '#fff', borderRadius: 8 }}
-          pagination={{ pageSize: 10 }}
-          loading={loading}
-          locale={{ emptyText: 'Không có bản ghi' }}
-          scroll={{ x: isTenant ? 900 : 1100 }}
-        />
-      )}
+      <ResponsiveTable
+        rowKey={(record) => pickId(record, ["ma_cong_no", "ma_cn", "MACN"])}
+        columns={columns}
+        dataSource={items}
+        loading={loading}
+      />
+
+      <Modal
+        title="Tính công nợ tháng"
+        open={open}
+        onCancel={() => setOpen(false)}
+        onOk={calculate}
+        okText="Tính công nợ"
+        cancelText="Hủy"
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item label="Tháng" name="thang" rules={[{ required: true, message: "Nhập tháng" }]}>
+            <InputNumber min={1} max={12} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item label="Năm" name="nam" rules={[{ required: true, message: "Nhập năm" }]}>
+            <InputNumber min={2000} max={2100} style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 }

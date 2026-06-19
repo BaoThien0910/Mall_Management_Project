@@ -61,6 +61,11 @@ class HopDongFilter(BaseModel):
     trang_thai: Optional[HopDongStatus] = None
     ngay_bat_dau_tu: Optional[date] = None
     ngay_bat_dau_den: Optional[date] = None
+    ngay_ket_thuc_tu: Optional[date] = None
+    ngay_ket_thuc_den: Optional[date] = None
+    gia_thue_tu: Optional[Decimal] = None
+    gia_thue_den: Optional[Decimal] = None
+    keyword: Optional[str] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)
 
@@ -72,6 +77,12 @@ class HopDongFilter(BaseModel):
             and self.ngay_bat_dau_den < self.ngay_bat_dau_tu
         ):
             raise ValueError("Ngày bắt đầu đến phải lớn hơn hoặc bằng ngày bắt đầu từ.")
+        if (
+            self.ngay_ket_thuc_tu is not None
+            and self.ngay_ket_thuc_den is not None
+            and self.ngay_ket_thuc_den < self.ngay_ket_thuc_tu
+        ):
+            raise ValueError("Ngày kết thúc đến phải lớn hơn hoặc bằng ngày kết thúc từ.")
         return self
 
 

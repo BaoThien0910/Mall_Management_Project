@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.constants.statuses import AuditAction
 from app.exceptions.business_exceptions import ConflictException, InvalidStateException, NotFoundException
 from app.models import HopDong, KhachThue, NhanVien, TaiKhoan, VaiTro
-from app.schemas.taikhoan import TaiKhoanCreate, TaiKhoanDisableRequest, TaiKhoanFilter
+from app.schemas.taikhoan import TaiKhoanCreate, TaiKhoanDisableRequest, TaiKhoanEnableRequest, TaiKhoanFilter
 from app.services.audit_service import write_audit_log
 from app.utils.datetime_helper import current_datetime
 from app.utils.pagination import calculate_offset, calculate_total_pages, normalize_pagination
@@ -174,5 +174,34 @@ def disable_account(
             doi_tuong="TAIKHOAN",
             ma_doi_tuong=account.ma_tai_khoan,
             chi_tiet=payload.ly_do or "Vô hiệu hóa tài khoản",
+        )
+    return account
+
+
+def enable_account(
+    db: Session,
+    ma_tk: str,
+    payload: TaiKhoanEnableRequest,
+    current_user: Any,
+) -> TaiKhoan:
+    """Khôi phục tài khoản đã bị vô hiệu hóa."""
+    account = db.execute(
+        select(TaiKhoan).where(TaiKhoan.ma_tai_khoan == ma_tk)
+    ).scalars().first()
+    if account is None:
+        raise NotFoundException("Không tìm thấy tài khoản")
+    if account.trang_thai == _ACCOUNT_ACTIVE:
+        raise InvalidStateException("Tài khoản đang hoạt động")
+
+    actor_ma_tk = _user_attr(current_user, "ma_tk", "ma_tai_khoan")
+    with transaction_context(db):
+        account.trang_thai = _ACCOUNT_ACTIVE
+        write_audit_log(
+            db=db,
+            ma_tk=actor_ma_tk,
+            hanh_dong=AuditAction.CAP_NHAT,
+            doi_tuong="TAIKHOAN",
+            ma_doi_tuong=account.ma_tai_khoan,
+            chi_tiet=payload.ly_do or "Khôi phục tài khoản",
         )
     return account

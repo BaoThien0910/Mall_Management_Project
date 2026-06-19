@@ -2,7 +2,7 @@
 import uuid
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, or_
 from sqlalchemy.orm import Session
 
 from app.constants.statuses import AuditAction, HopDongStatus, MatBangStatus, YeuCauThueThemStatus
@@ -101,7 +101,23 @@ def list_rent_requests(
     if filters.ma_mat_bang:
         conditions.append(YeuCauThueThem.ma_mat_bang == filters.ma_mat_bang)
     if filters.trang_thai:
-        conditions.append(YeuCauThueThem.trang_thai == _enum_value(filters.trang_thai))
+        statuses = [s.strip() for s in filters.trang_thai.split(",") if s.strip()]
+        if len(statuses) == 1:
+            conditions.append(YeuCauThueThem.trang_thai == statuses[0])
+        elif len(statuses) > 1:
+            conditions.append(YeuCauThueThem.trang_thai.in_(statuses))
+    if filters.keyword:
+        kw = f"%{filters.keyword}%"
+        conditions.append(
+            or_(
+                YeuCauThueThem.ma_khach_thue.ilike(kw),
+                YeuCauThueThem.ma_mat_bang.ilike(kw)
+            )
+        )
+    if filters.ngay_gui_tu:
+        conditions.append(YeuCauThueThem.ngay_gui >= filters.ngay_gui_tu)
+    if filters.ngay_gui_den:
+        conditions.append(YeuCauThueThem.ngay_gui <= f"{filters.ngay_gui_den} 23:59:59")
 
     stmt = select(YeuCauThueThem)
     count_stmt = select(func.count()).select_from(YeuCauThueThem)
@@ -143,7 +159,23 @@ def list_my_rent_requests(
     if filters.ma_mat_bang:
         conditions.append(YeuCauThueThem.ma_mat_bang == filters.ma_mat_bang)
     if filters.trang_thai:
-        conditions.append(YeuCauThueThem.trang_thai == _enum_value(filters.trang_thai))
+        statuses = [s.strip() for s in filters.trang_thai.split(",") if s.strip()]
+        if len(statuses) == 1:
+            conditions.append(YeuCauThueThem.trang_thai == statuses[0])
+        elif len(statuses) > 1:
+            conditions.append(YeuCauThueThem.trang_thai.in_(statuses))
+    if filters.keyword:
+        kw = f"%{filters.keyword}%"
+        conditions.append(
+            or_(
+                YeuCauThueThem.ma_khach_thue.ilike(kw),
+                YeuCauThueThem.ma_mat_bang.ilike(kw)
+            )
+        )
+    if filters.ngay_gui_tu:
+        conditions.append(YeuCauThueThem.ngay_gui >= filters.ngay_gui_tu)
+    if filters.ngay_gui_den:
+        conditions.append(YeuCauThueThem.ngay_gui <= f"{filters.ngay_gui_den} 23:59:59")
 
     clause = and_(*conditions)
     total = db.execute(

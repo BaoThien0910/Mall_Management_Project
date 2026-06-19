@@ -44,6 +44,10 @@ class TaiKhoanDisableRequest(BaseModel):
     ly_do: Optional[str] = Field(default=None, max_length=500)
 
 
+class TaiKhoanEnableRequest(BaseModel):
+    ly_do: Optional[str] = Field(default=None, max_length=500)
+
+
 class TaiKhoanResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
